@@ -1,0 +1,30 @@
+{
+  "expo": {
+    "name": "VoiceReal",
+    "slug": "voice-real",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "scheme": "voicereal",
+    "userInterfaceStyle": "light",
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": false,
+      "infoPlist": {
+        "NSCameraUsageDescription": "VoiceReal uses your camera so you can share a daily candid photo.",
+        "NSMicrophoneUsageDescription": "VoiceReal uses your microphone so you can send voice notes to friends."
+      }
+    },
+    "android": {
+      "permissions": [
+        "CAMERA",
+        "RECORD_AUDIO"
+      ]
+    },
+    "plugins": [
+      "expo-camera",
+      "expo-av"
+    ]
+  }
+}
