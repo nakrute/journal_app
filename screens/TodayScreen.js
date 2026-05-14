@@ -11,7 +11,7 @@ import {
   View
 } from "react-native";
 import { IconButton } from "../components/Buttons";
-import { styles } from "../styles";
+import { useStyles, useTheme } from "../theme";
 import { formatMillis, getPlaybackProgress } from "../utils/time";
 
 export function TodayScreen({
@@ -30,14 +30,21 @@ export function TodayScreen({
   onTakePhoto,
   onToggleAddToPosts,
   onChangeCaption,
+  onDiscardDraft,
   playbackStatus,
   playbackUri,
   posted,
   prompt,
   recording,
+  recordingSeconds,
+  onRemovePhoto,
+  onRemoveVoice,
   requestCameraPermission,
   voiceUri
 }) {
+  const styles = useStyles();
+  const { isDarkMode } = useTheme();
+  const foregroundIcon = isDarkMode ? "#f8f7f2" : "#111";
   const draftPlaybackStatus =
     playbackUri === voiceUri
       ? playbackStatus
@@ -75,7 +82,7 @@ export function TodayScreen({
             />
           ) : (
             <View style={styles.permissionPanel}>
-              <Ionicons name="camera-outline" size={36} color="#111" />
+              <Ionicons name="camera-outline" size={36} color={foregroundIcon} />
               <Text style={styles.permissionTitle}>Camera access</Text>
               <Pressable style={styles.darkButton} onPress={requestCameraPermission}>
                 <Text style={styles.darkButtonText}>Enable Camera</Text>
@@ -90,18 +97,42 @@ export function TodayScreen({
             style={[styles.captureButton, recording && styles.disabledButton]}
             disabled={!!recording}
             onPress={capturedPhoto ? onRetake : onTakePhoto}
+            accessibilityRole="button"
+            accessibilityLabel={capturedPhoto ? "Retake photo" : "Take photo"}
           >
             <Ionicons name={capturedPhoto ? "refresh-outline" : "aperture-outline"} size={28} color="#fff" />
           </Pressable>
           <IconButton icon="mic-outline" label={recording ? "Stop" : "Voice"} active={!!recording} onPress={onRecord} />
         </View>
 
+        {capturedPhoto || voiceUri || caption !== "My real moment." ? (
+          <View style={styles.composerTools}>
+            <Pressable
+              style={[styles.secondaryActionButton, !capturedPhoto && styles.disabledButton]}
+              onPress={onRemovePhoto}
+              disabled={!capturedPhoto}
+            >
+              <Text style={styles.secondaryActionText}>Remove photo</Text>
+            </Pressable>
+            <Pressable
+              style={[styles.secondaryActionButton, !voiceUri && styles.disabledButton]}
+              onPress={onRemoveVoice}
+              disabled={!voiceUri}
+            >
+              <Text style={styles.secondaryActionText}>Replace voice</Text>
+            </Pressable>
+            <Pressable style={styles.secondaryActionButton} onPress={onDiscardDraft}>
+              <Text style={styles.secondaryActionText}>Discard draft</Text>
+            </Pressable>
+          </View>
+        ) : null}
+
         <View style={styles.voicePanel}>
           <View style={styles.voiceInfo}>
             <Text style={styles.panelTitle}>Voice message</Text>
             <Text style={styles.subtle}>
               {recording
-                ? "Recording..."
+                ? `Recording ${formatMillis(recordingSeconds * 1000)}`
                 : voiceUri
                   ? `${formatMillis(draftPlaybackStatus.positionMillis)} / ${formatMillis(draftPlaybackStatus.durationMillis)}`
                   : "Add a short note for friends"}
@@ -116,6 +147,8 @@ export function TodayScreen({
             style={[styles.playButton, (!voiceUri || recording) && styles.disabledButton]}
             disabled={!voiceUri || recording}
             onPress={onPlayVoice}
+            accessibilityRole="button"
+            accessibilityLabel={draftPlaybackStatus.isPlaying ? "Pause voice note" : "Play voice note"}
           >
             <Ionicons
               name={draftPlaybackStatus.isPlaying ? "pause" : "play"}
@@ -146,7 +179,7 @@ export function TodayScreen({
           <Ionicons
             name={addToPosts ? "checkbox-outline" : "square-outline"}
             size={24}
-            color="#111"
+            color={foregroundIcon}
           />
           <View style={styles.optionCopy}>
             <Text style={styles.optionTitle}>Add to Posts</Text>

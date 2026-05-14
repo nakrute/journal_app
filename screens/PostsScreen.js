@@ -1,11 +1,21 @@
 import { Ionicons } from "@expo/vector-icons";
 import { ScrollView, Text, View } from "react-native";
 import { PostCard } from "../components/PostCard";
-import { styles } from "../styles";
+import { useStyles } from "../theme";
 import { buildPostItem } from "../utils/posts";
 
-export function PostsScreen({ posts, playbackStatus, onPlayVoice, playbackUri }) {
-  const feed = posts.map((post) => buildPostItem(post, "saved"));
+export function PostsScreen({
+  posts,
+  profile,
+  playbackStatus,
+  onDeletePost,
+  onEditPostCaption,
+  onOpenPost,
+  onPlayVoice,
+  playbackUri
+}) {
+  const styles = useStyles();
+  const feed = posts.map((post) => buildPostItem(post, "saved", profile, true));
 
   return (
     <ScrollView contentContainerStyle={styles.feed}>
@@ -20,6 +30,9 @@ export function PostsScreen({ posts, playbackStatus, onPlayVoice, playbackUri })
           <PostCard
             key={item.id}
             item={item}
+            onDelete={onDeletePost}
+            onEditCaption={onEditPostCaption}
+            onOpen={onOpenPost}
             onPlayVoice={onPlayVoice}
             playbackStatus={playbackStatus}
             playbackUri={playbackUri}

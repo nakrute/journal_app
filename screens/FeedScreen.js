@@ -1,11 +1,24 @@
 import { ScrollView } from "react-native";
 import { PostCard } from "../components/PostCard";
-import { friends } from "../data/friends";
-import { styles } from "../styles";
+import { useStyles } from "../theme";
 import { buildPostItem } from "../utils/posts";
 
-export function FeedScreen({ publishedPost, playbackStatus, onPlayVoice, playbackUri }) {
-  const feed = publishedPost ? [buildPostItem(publishedPost, "now"), ...friends] : friends;
+export function FeedScreen({
+  friends,
+  publishedPost,
+  profile,
+  playbackStatus,
+  onDeletePost,
+  onEditPostCaption,
+  onOpenPost,
+  onPlayVoice,
+  playbackUri
+}) {
+  const styles = useStyles();
+  const friendPosts = friends.filter((friend) => friend.photo);
+  const feed = publishedPost
+    ? [buildPostItem(publishedPost, "now", profile, true), ...friendPosts]
+    : friendPosts;
 
   return (
     <ScrollView contentContainerStyle={styles.feed}>
@@ -13,6 +26,9 @@ export function FeedScreen({ publishedPost, playbackStatus, onPlayVoice, playbac
         <PostCard
           key={item.id}
           item={item}
+          onDelete={item.isOwnPost ? onDeletePost : undefined}
+          onEditCaption={item.isOwnPost ? onEditPostCaption : undefined}
+          onOpen={onOpenPost}
           onPlayVoice={onPlayVoice}
           playbackStatus={playbackStatus}
           playbackUri={playbackUri}

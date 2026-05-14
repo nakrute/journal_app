@@ -1,10 +1,10 @@
 {
   "expo": {
-    "name": "VoiceReal",
-    "slug": "voice-real",
+    "name": "OutLoud",
+    "slug": "outloud",
     "version": "0.1.0",
     "orientation": "portrait",
-    "scheme": "voicereal",
+    "scheme": "outloud",
     "userInterfaceStyle": "light",
     "assetBundlePatterns": [
       "**/*"
@@ -12,19 +12,22 @@
     "ios": {
       "supportsTablet": false,
       "infoPlist": {
-        "NSCameraUsageDescription": "VoiceReal uses your camera so you can share a daily candid photo.",
-        "NSMicrophoneUsageDescription": "VoiceReal uses your microphone so you can send voice notes to friends."
+        "NSCameraUsageDescription": "OutLoud uses your camera so you can share a daily candid photo.",
+        "NSMicrophoneUsageDescription": "OutLoud uses your microphone so you can send voice notes to friends."
       }
     },
     "android": {
       "permissions": [
         "CAMERA",
-        "RECORD_AUDIO"
+        "RECORD_AUDIO",
+        "POST_NOTIFICATIONS"
       ]
     },
     "plugins": [
+      "expo-dev-client",
       "expo-camera",
-      "expo-av"
+      "expo-av",
+      "expo-notifications"
     ]
   }
 }

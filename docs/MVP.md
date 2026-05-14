@@ -1,8 +1,8 @@
-# VoiceReal MVP
+# OutLoud MVP
 
 ## Core idea
 
-VoiceReal is a mobile app where friends get a daily prompt to post a candid photo and attach a short voice note. The voice note is the emotional layer: users can react, explain, joke, or check in without turning the app into a polished social feed.
+OutLoud is a mobile app where friends get a daily prompt to post a candid photo and attach a short voice note. The voice note is the emotional layer: users can react, explain, joke, or check in without turning the app into a polished social feed.
 
 ## First release scope
 
