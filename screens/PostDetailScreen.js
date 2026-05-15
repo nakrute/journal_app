@@ -11,6 +11,7 @@ export function PostDetailScreen({
   onDelete,
   onEditCaption,
   onPlayVoice,
+  onReport,
   onShare,
   playbackStatus,
   playbackUri
@@ -35,6 +36,7 @@ export function PostDetailScreen({
         <View style={styles.detailTitleCopy}>
           <Text style={styles.friendName}>{item.name}</Text>
           <Text style={styles.subtle}>{item.handle} / {item.time}</Text>
+          <Text style={styles.visibilityText}>{item.visibility || "friends"}</Text>
         </View>
       </View>
 
@@ -89,7 +91,12 @@ export function PostDetailScreen({
             <Ionicons name="trash-outline" size={18} color="#111" />
             <Text style={styles.destructiveButtonText}>Delete post</Text>
           </Pressable>
-        ) : null}
+        ) : (
+          <Pressable style={styles.destructiveButton} onPress={() => onReport(item)}>
+            <Ionicons name="flag-outline" size={18} color="#111" />
+            <Text style={styles.destructiveButtonText}>Report post</Text>
+          </Pressable>
+        )}
       </View>
     </ScrollView>
   );

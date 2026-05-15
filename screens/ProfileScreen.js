@@ -22,6 +22,8 @@ export function ProfileScreen({
   onChangeReminderTime,
   onClose,
   onDeclineFriendRequest,
+  onOpenFriend,
+  onPickProfilePhoto,
   onRequestCameraPermission,
   onRequestMicrophonePermission,
   onRemoveFriend,
@@ -30,14 +32,19 @@ export function ProfileScreen({
   onRunBugScenario,
   onSendTestNotification,
   onSimulateFriendPost,
+  onToggleNotificationPreference,
   onTogglePrivacySetting,
   onToggleDailyReminder,
   onToggleDarkMode,
+  onToggleCloseFriend,
   onUpdateSecuritySettings,
+  onUpdateQuietHours,
   permissionStatuses,
   profile,
   privacySettings,
   promptHistory,
+  reports,
+  safetySettings,
   securitySettings
 }) {
   const styles = useStyles();
@@ -94,7 +101,9 @@ export function ProfileScreen({
           onBlockFriend={onBlockFriend}
           onChangeFriendHandle={setFriendHandle}
           onDeclineFriendRequest={onDeclineFriendRequest}
+          onOpenFriend={onOpenFriend}
           onRemoveFriend={onRemoveFriend}
+          onToggleCloseFriend={onToggleCloseFriend}
           privacySettings={privacySettings}
         />
       ) : (
@@ -107,6 +116,7 @@ export function ProfileScreen({
           onChangeReminderTime={onChangeReminderTime}
           onRequestCameraPermission={onRequestCameraPermission}
           onRequestMicrophonePermission={onRequestMicrophonePermission}
+          onPickProfilePhoto={onPickProfilePhoto}
           onResetOnboarding={onResetOnboarding}
           onRestoreDemoData={onRestoreDemoData}
           onRunBugScenario={onRunBugScenario}
@@ -115,11 +125,15 @@ export function ProfileScreen({
           onTogglePrivacySetting={onTogglePrivacySetting}
           onToggleDailyReminder={onToggleDailyReminder}
           onToggleDarkMode={onToggleDarkMode}
+          onToggleNotificationPreference={onToggleNotificationPreference}
           onUpdateSecuritySettings={onUpdateSecuritySettings}
+          onUpdateQuietHours={onUpdateQuietHours}
           permissionStatuses={permissionStatuses}
           profile={profile}
           privacySettings={privacySettings}
           promptHistory={promptHistory}
+          reports={reports}
+          safetySettings={safetySettings}
           securitySettings={securitySettings}
           onUpdateProfile={updateProfile}
         />

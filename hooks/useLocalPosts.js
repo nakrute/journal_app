@@ -1,4 +1,9 @@
 import { cleanupUnusedMedia, deleteMedia } from "../utils/media";
+import {
+  archivePromptFromPost,
+  updatePostCaption,
+  updatePostCaptionList
+} from "../services/postsService";
 import { usePersistedState } from "./usePersistedState";
 
 export function useLocalPosts(logEvent) {
@@ -17,31 +22,18 @@ export function useLocalPosts(logEvent) {
 
     if (archivePrompt) {
       setPromptHistory((history) => [
-        {
-          id: `prompt-${Date.now()}`,
-          prompt,
-          caption: nextPost.caption,
-          date: nextPost.date,
-          savedToPosts: addToPosts
-        },
+        archivePromptFromPost(nextPost, prompt, addToPosts),
         ...history.slice(0, 9)
       ]);
     }
   }
 
   function updatePostCaption(postId, nextCaption, setSelectedPost) {
-    const captionText = nextCaption.trim() || "My real moment.";
-
-    setPublishedPost((post) => {
-      if (!post || post.id !== postId) return post;
-      return { ...post, caption: captionText };
-    });
-    setGeneralPosts((posts) =>
-      posts.map((post) => (post.id === postId ? { ...post, caption: captionText } : post))
-    );
+    setPublishedPost((post) => updatePostCaption(post, postId, nextCaption));
+    setGeneralPosts((posts) => updatePostCaptionList(posts, postId, nextCaption));
     setSelectedPost?.((post) => {
       if (!post || post.id !== postId) return post;
-      return { ...post, caption: captionText };
+      return updatePostCaption(post, postId, nextCaption);
     });
     logEvent("Edited post caption");
   }

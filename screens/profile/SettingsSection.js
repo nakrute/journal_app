@@ -7,6 +7,7 @@ import {
   formatReminderTime,
   reminderTimeOptions
 } from "../../utils/notifications";
+import { validateHandle, validateTimeValue } from "../../utils/validation";
 
 export function SettingsSection({
   activityLog,
@@ -17,6 +18,7 @@ export function SettingsSection({
   onChangeReminderTime,
   onRequestCameraPermission,
   onRequestMicrophonePermission,
+  onPickProfilePhoto,
   onResetOnboarding,
   onRestoreDemoData,
   onRunBugScenario,
@@ -25,12 +27,16 @@ export function SettingsSection({
   onTogglePrivacySetting,
   onToggleDailyReminder,
   onToggleDarkMode,
+  onToggleNotificationPreference,
   onUpdateSecuritySettings,
+  onUpdateQuietHours,
   onUpdateProfile,
   permissionStatuses,
   profile,
   privacySettings,
   promptHistory,
+  reports,
+  safetySettings,
   securitySettings
 }) {
   const styles = useStyles();
@@ -46,6 +52,7 @@ export function SettingsSection({
         <AccountSettings
           isDarkMode={isDarkMode}
           onToggleDarkMode={onToggleDarkMode}
+          onPickProfilePhoto={onPickProfilePhoto}
           onUpdateProfile={onUpdateProfile}
           onUpdateSecuritySettings={onUpdateSecuritySettings}
           profile={profile}
@@ -61,6 +68,8 @@ export function SettingsSection({
           onSendTestNotification={onSendTestNotification}
           onSimulateFriendPost={onSimulateFriendPost}
           onToggleDailyReminder={onToggleDailyReminder}
+          onToggleNotificationPreference={onToggleNotificationPreference}
+          onUpdateQuietHours={onUpdateQuietHours}
         />
       ) : null}
 
@@ -92,6 +101,10 @@ export function SettingsSection({
         <PrivacySettings privacySettings={privacySettings} onTogglePrivacySetting={onTogglePrivacySetting} />
       ) : null}
 
+      {settingsSection === "safety" ? (
+        <SafetySettings reports={reports} safetySettings={safetySettings} />
+      ) : null}
+
       {settingsSection === "history" ? (
         <PromptHistory promptHistory={promptHistory} />
       ) : null}
@@ -120,6 +133,7 @@ function SettingsMenu({ active, onChange }) {
         ["permissions", "Permissions"],
         ["privacy", "Privacy"],
         ["notifications", "Alerts"],
+        ["safety", "Safety"],
         ["history", "History"],
         ["debug", "Debug"]
       ].map(([key, label]) => (
@@ -140,6 +154,7 @@ function SettingsMenu({ active, onChange }) {
 function AccountSettings({
   isDarkMode,
   onToggleDarkMode,
+  onPickProfilePhoto,
   onUpdateProfile,
   onUpdateSecuritySettings,
   profile,
@@ -159,6 +174,14 @@ function AccountSettings({
         </View>
       </Pressable>
 
+      <Pressable style={styles.settingRow} onPress={onPickProfilePhoto}>
+        <View>
+          <Text style={styles.settingTitle}>Profile photo</Text>
+          <Text style={styles.subtle}>Pick a picture from this device.</Text>
+        </View>
+        <Ionicons name="image-outline" size={20} color="#111" />
+      </Pressable>
+
       <ProfileField
         label="Display name"
         value={profile.name}
@@ -171,6 +194,7 @@ function AccountSettings({
         onChangeText={(value) => onUpdateProfile("handle", value)}
         placeholder="@yourhandle"
         autoCapitalize="none"
+        error={validateHandle(profile.handle)}
       />
       <ProfileField
         label="Profile photo URL"
@@ -202,7 +226,9 @@ function NotificationSettings({
   onChangeReminderTime,
   onSendTestNotification,
   onSimulateFriendPost,
-  onToggleDailyReminder
+  onToggleDailyReminder,
+  onToggleNotificationPreference,
+  onUpdateQuietHours
 }) {
   const styles = useStyles();
 
@@ -263,6 +289,49 @@ function NotificationSettings({
       <Pressable style={styles.secondaryActionButton} onPress={onSimulateFriendPost}>
         <Text style={styles.secondaryActionText}>Simulate new friend post</Text>
       </Pressable>
+
+      <ToggleRow
+        enabled={notificationSettings.friendPostsEnabled}
+        label="Friend post alerts"
+        description="Notify when a friend posts a new check-in."
+        onPress={() => onToggleNotificationPreference("friendPostsEnabled")}
+      />
+      <ToggleRow
+        enabled={notificationSettings.friendRequestsEnabled}
+        label="Friend request alerts"
+        description="Notify when someone asks to connect."
+        onPress={() => onToggleNotificationPreference("friendRequestsEnabled")}
+      />
+      <ToggleRow
+        enabled={notificationSettings.quietHoursEnabled}
+        label="Quiet hours"
+        description={`Pause social alerts from ${notificationSettings.quietHoursStart} to ${notificationSettings.quietHoursEnd}.`}
+        onPress={() => onToggleNotificationPreference("quietHoursEnabled")}
+      />
+      <View style={styles.friendAddRow}>
+        <TextInput
+          style={styles.friendAddInput}
+          value={notificationSettings.quietHoursStart}
+          onChangeText={(value) => onUpdateQuietHours("quietHoursStart", value)}
+          placeholder="22:00"
+          placeholderTextColor="#8a867d"
+        />
+        <TextInput
+          style={styles.friendAddInput}
+          value={notificationSettings.quietHoursEnd}
+          onChangeText={(value) => onUpdateQuietHours("quietHoursEnd", value)}
+          placeholder="08:00"
+          placeholderTextColor="#8a867d"
+        />
+      </View>
+      {notificationSettings.quietHoursEnabled &&
+      (validateTimeValue(notificationSettings.quietHoursStart) ||
+        validateTimeValue(notificationSettings.quietHoursEnd)) ? (
+        <Text style={styles.errorText}>
+          {validateTimeValue(notificationSettings.quietHoursStart) ||
+            validateTimeValue(notificationSettings.quietHoursEnd)}
+        </Text>
+      ) : null}
     </View>
   );
 }
@@ -278,6 +347,12 @@ function PrivacySettings({ privacySettings, onTogglePrivacySetting }) {
         label="Allow friend requests"
         description="Let people send local mock requests."
         onPress={() => onTogglePrivacySetting("allowFriendRequests")}
+      />
+      <ToggleRow
+        enabled={privacySettings.allowProfileDiscovery}
+        label="Profile discovery"
+        description="Let your profile appear in friend search."
+        onPress={() => onTogglePrivacySetting("allowProfileDiscovery")}
       />
       <ToggleRow
         enabled={privacySettings.privateProfile}
@@ -297,6 +372,40 @@ function PrivacySettings({ privacySettings, onTogglePrivacySetting }) {
         description="A local preference for future notification logic."
         onPress={() => onTogglePrivacySetting("muteDailyReminders")}
       />
+    </View>
+  );
+}
+
+function SafetySettings({ reports = [], safetySettings }) {
+  const styles = useStyles();
+
+  return (
+    <View style={styles.settingGroup}>
+      <Text style={styles.profileLabel}>Release safety</Text>
+      <View style={styles.historyRow}>
+        <Text style={styles.settingTitle}>Terms and privacy</Text>
+        <Text style={styles.subtle}>
+          Placeholder screens are ready for legal copy, delete account, export data, and support links before public launch.
+        </Text>
+        <Text style={styles.caption}>Support: {safetySettings.supportEmail}</Text>
+      </View>
+      <View style={styles.historyRow}>
+        <Text style={styles.settingTitle}>Age gate</Text>
+        <Text style={styles.subtle}>
+          Production should require an age confirmation before account creation.
+        </Text>
+      </View>
+      <Text style={styles.profileLabel}>Local reports</Text>
+      {reports.length === 0 ? (
+        <Text style={styles.subtle}>Reports you create in this prototype will appear here.</Text>
+      ) : (
+        reports.slice(0, 5).map((report) => (
+          <View key={report.id} style={styles.historyRow}>
+            <Text style={styles.settingTitle}>{report.targetName}</Text>
+            <Text style={styles.subtle}>{report.targetType} / {report.reason}</Text>
+          </View>
+        ))
+      )}
     </View>
   );
 }
@@ -461,16 +570,18 @@ function SecuritySection({ securitySettings, onUpdateSecuritySettings }) {
 
 function ProfileField({ label, ...props }) {
   const styles = useStyles();
+  const { error, ...inputProps } = props;
 
   return (
     <View style={styles.profileField}>
       <Text style={styles.profileLabel}>{label}</Text>
       <TextInput
-        style={[styles.profileInput, props.multiline && styles.profileBioInput]}
+        style={[styles.profileInput, inputProps.multiline && styles.profileBioInput]}
         placeholderTextColor="#8a867d"
-        textAlignVertical={props.multiline ? "top" : "center"}
-        {...props}
+        textAlignVertical={inputProps.multiline ? "top" : "center"}
+        {...inputProps}
       />
+      {error ? <Text style={styles.errorText}>{error}</Text> : null}
     </View>
   );
 }

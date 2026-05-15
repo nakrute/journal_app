@@ -12,6 +12,7 @@ export function FeedScreen({
   onEditPostCaption,
   onOpenPost,
   onPlayVoice,
+  onReportPost,
   playbackUri
 }) {
   const styles = useStyles();
@@ -30,6 +31,7 @@ export function FeedScreen({
           onEditCaption={item.isOwnPost ? onEditPostCaption : undefined}
           onOpen={onOpenPost}
           onPlayVoice={onPlayVoice}
+          onReport={onReportPost}
           playbackStatus={playbackStatus}
           playbackUri={playbackUri}
         />

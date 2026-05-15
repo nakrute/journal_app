@@ -16,9 +16,15 @@ export function useAppSettings() {
   const [hasSeenOnboarding, setHasSeenOnboarding] = usePersistedState("voiceReal.hasSeenOnboarding", false);
   const [privacySettings, setPrivacySettings] = usePersistedState("voiceReal.privacySettings", {
     allowFriendRequests: true,
+    allowProfileDiscovery: true,
     privateProfile: false,
     savePostsToArchive: true,
     muteDailyReminders: false
+  });
+  const [safetySettings, setSafetySettings] = usePersistedState("voiceReal.safetySettings", {
+    ageConfirmed: false,
+    supportEmail: "support@outloud.local",
+    termsAccepted: false
   });
   const [securitySettings, setSecuritySettings] = usePersistedState("voiceReal.securitySettings", {
     appLockEnabled: false,
@@ -50,11 +56,13 @@ export function useAppSettings() {
     isDarkMode,
     privacySettings,
     profile,
+    safetySettings,
     securitySettings,
     setHasSeenOnboarding,
     setIsDarkMode,
     setPrivacySettings,
     setProfile,
+    setSafetySettings,
     storageReady,
     togglePrivacySetting,
     updateSecuritySettings

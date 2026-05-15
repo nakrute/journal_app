@@ -9,6 +9,7 @@ export const friends = [
     photo:
       "https://images.unsplash.com/photo-1529156069898-49953e39b3ac?auto=format&fit=crop&w=900&q=80",
     caption: "Caught right before rehearsal.",
+    isCloseFriend: true,
     voice: "0:18"
   },
   {
@@ -21,6 +22,7 @@ export const friends = [
     photo:
       "https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&w=900&q=80",
     caption: "Desk chaos, honest version.",
+    isCloseFriend: false,
     voice: "0:11"
   },
   {
@@ -33,6 +35,7 @@ export const friends = [
     photo:
       "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=900&q=80",
     caption: "Walked outside for five minutes.",
+    isCloseFriend: true,
     voice: "0:24"
   }
 ];
@@ -42,6 +45,7 @@ export const incomingFriendRequests = [
     id: "sam",
     name: "Sam",
     handle: "@samstill",
+    isCloseFriend: false,
     avatarUri:
       "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=300&q=80"
   },
@@ -49,6 +53,7 @@ export const incomingFriendRequests = [
     id: "jules",
     name: "Jules",
     handle: "@juleslive",
+    isCloseFriend: false,
     avatarUri:
       "https://images.unsplash.com/photo-1544723795-3fb6469f5b39?auto=format&fit=crop&w=300&q=80"
   }

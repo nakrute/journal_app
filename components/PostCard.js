@@ -10,6 +10,7 @@ export function PostCard({
   onDelete,
   onEditCaption,
   onOpen,
+  onReport,
   playbackStatus,
   onPlayVoice,
   playbackUri
@@ -62,9 +63,14 @@ export function PostCard({
                   <Ionicons name="trash-outline" size={17} color={iconColor} />
                 </Pressable>
               </View>
-            ) : null}
+            ) : (
+              <Pressable style={styles.postIconButton} onPress={() => onReport?.(item)}>
+                <Ionicons name="flag-outline" size={17} color={iconColor} />
+              </Pressable>
+            )}
           </View>
         </View>
+        <Text style={styles.visibilityText}>{formatVisibility(item.visibility)}</Text>
         {isEditingCaption ? (
           <View style={styles.editCaptionPanel}>
             <TextInput
@@ -121,6 +127,13 @@ export function PostCard({
       </View>
     </View>
   );
+}
+
+function formatVisibility(visibility) {
+  if (visibility === "public") return "Public";
+  if (visibility === "private") return "Private archive";
+  if (visibility === "close") return "Close friends";
+  return "Friends";
 }
 
 function getFeedVoiceIcon(item, playbackUri, playbackStatus) {

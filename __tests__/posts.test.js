@@ -1,4 +1,5 @@
 import { buildPostItem } from "../utils/posts";
+import { createPostDraft } from "../services/postsService";
 
 describe("post utilities", () => {
   test("builds own post feed item from profile", () => {
@@ -15,5 +16,24 @@ describe("post utilities", () => {
       name: "Nia",
       playable: true
     });
+  });
+
+  test("creates backend-shaped post draft", () => {
+    const post = createPostDraft({
+      caption: "  Hello  ",
+      capturedPhoto: "photo",
+      prompt: "Prompt",
+      visibility: "close",
+      voiceUri: "voice"
+    });
+
+    expect(post).toMatchObject({
+      caption: "Hello",
+      photo: "photo",
+      prompt: "Prompt",
+      visibility: "close",
+      voiceUri: "voice"
+    });
+    expect(post.id).toMatch(/^post-/);
   });
 });

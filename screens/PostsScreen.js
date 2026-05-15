@@ -12,6 +12,7 @@ export function PostsScreen({
   onEditPostCaption,
   onOpenPost,
   onPlayVoice,
+  onReportPost,
   playbackUri
 }) {
   const styles = useStyles();
@@ -34,6 +35,7 @@ export function PostsScreen({
             onEditCaption={onEditPostCaption}
             onOpen={onOpenPost}
             onPlayVoice={onPlayVoice}
+            onReport={onReportPost}
             playbackStatus={playbackStatus}
             playbackUri={playbackUri}
           />

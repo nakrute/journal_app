@@ -10,6 +10,7 @@ export function buildPostItem(post, time, profile, isOwnPost = false) {
     playable: !!post.voiceUri,
     isOwnPost,
     voice: post.voiceUri ? "Voice note" : "No voice",
+    visibility: post.visibility || "friends",
     voiceUri: post.voiceUri
   };
 }

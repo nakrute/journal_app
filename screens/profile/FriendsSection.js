@@ -12,7 +12,9 @@ export function FriendsSection({
   onBlockFriend,
   onChangeFriendHandle,
   onDeclineFriendRequest,
+  onOpenFriend,
   onRemoveFriend,
+  onToggleCloseFriend,
   privacySettings
 }) {
   const styles = useStyles();
@@ -72,12 +74,21 @@ export function FriendsSection({
           <View key={friend.id} style={styles.friendRow}>
             <Avatar name={friend.name} uri={friend.avatarUri} size="friend" />
             <View style={styles.friendCopy}>
-              <Text style={styles.friendNameText}>{friend.name}</Text>
-              <Text style={styles.subtle}>{friend.handle}</Text>
+              <Pressable onPress={() => onOpenFriend(friend)}>
+                <Text style={styles.friendNameText}>{friend.name}</Text>
+                <Text style={styles.subtle}>{friend.handle}</Text>
+              </Pressable>
             </View>
             <View style={styles.friendRequestActions}>
               <Pressable style={styles.friendActionButton} onPress={() => onRemoveFriend(friend.id)}>
                 <Ionicons name="person-remove-outline" size={18} color={iconColor} />
+              </Pressable>
+              <Pressable style={styles.friendActionButton} onPress={() => onToggleCloseFriend(friend.id)}>
+                <Ionicons
+                  name={friend.isCloseFriend ? "star" : "star-outline"}
+                  size={18}
+                  color={friend.isCloseFriend ? "#111" : iconColor}
+                />
               </Pressable>
               <Pressable style={styles.friendActionButton} onPress={() => onBlockFriend(friend.id)}>
                 <Ionicons name="ban-outline" size={18} color={iconColor} />

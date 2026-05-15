@@ -5,12 +5,14 @@ export function useDraftComposer() {
   const [voiceUri, setVoiceUri] = usePersistedState("voiceReal.draft.voiceUri", null);
   const [caption, setCaption] = usePersistedState("voiceReal.draft.caption", "My real moment.");
   const [addToPosts, setAddToPosts] = usePersistedState("voiceReal.draft.addToPosts", false);
+  const [visibility, setVisibility] = usePersistedState("voiceReal.draft.visibility", "friends");
 
   function resetDraft() {
     setCapturedPhoto(null);
     setVoiceUri(null);
     setCaption("My real moment.");
     setAddToPosts(false);
+    setVisibility("friends");
   }
 
   return {
@@ -21,7 +23,9 @@ export function useDraftComposer() {
     setAddToPosts,
     setCaption,
     setCapturedPhoto,
+    setVisibility,
     setVoiceUri,
+    visibility,
     voiceUri
   };
 }

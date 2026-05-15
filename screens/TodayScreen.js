@@ -37,9 +37,13 @@ export function TodayScreen({
   prompt,
   recording,
   recordingSeconds,
+  recordingStatus,
   onRemovePhoto,
   onRemoveVoice,
   requestCameraPermission,
+  voiceMaxSeconds,
+  visibility,
+  onChangeVisibility,
   voiceUri
 }) {
   const styles = useStyles();
@@ -132,11 +136,12 @@ export function TodayScreen({
             <Text style={styles.panelTitle}>Voice message</Text>
             <Text style={styles.subtle}>
               {recording
-                ? `Recording ${formatMillis(recordingSeconds * 1000)}`
+                ? `Recording ${formatMillis(recordingSeconds * 1000)} / ${formatMillis(voiceMaxSeconds * 1000)}`
                 : voiceUri
-                  ? `${formatMillis(draftPlaybackStatus.positionMillis)} / ${formatMillis(draftPlaybackStatus.durationMillis)}`
+                  ? `${recordingStatus === "saving" ? "Saving..." : "Ready"} / ${formatMillis(draftPlaybackStatus.positionMillis)} / ${formatMillis(draftPlaybackStatus.durationMillis)}`
                   : "Add a short note for friends"}
             </Text>
+            <Text style={styles.subtle}>Voice notes are capped at {voiceMaxSeconds} seconds for now.</Text>
             {voiceUri ? (
               <View style={styles.progressTrack}>
                 <View style={[styles.progressFill, { width: `${progressPercent}%` }]} />
@@ -187,10 +192,42 @@ export function TodayScreen({
           </View>
         </Pressable>
 
+        <View style={styles.captionPanel}>
+          <View style={styles.captionHeader}>
+            <Text style={styles.panelTitle}>Visibility</Text>
+            <Text style={styles.captionCount}>{formatVisibility(visibility)}</Text>
+          </View>
+          <View style={styles.visibilityOptions}>
+            {[
+              ["friends", "Friends"],
+              ["close", "Close"],
+              ["private", "Private"],
+              ["public", "Public"]
+            ].map(([value, label]) => (
+              <Pressable
+                key={value}
+                style={[styles.reminderTimeButton, visibility === value && styles.activeReminderTimeButton]}
+                onPress={() => onChangeVisibility(value)}
+              >
+                <Text style={[styles.reminderTimeText, visibility === value && styles.activeReminderTimeText]}>
+                  {label}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+        </View>
+
         <Pressable style={[styles.publishButton, posted && !voiceUri && styles.postedButton]} onPress={onPublish}>
           <Text style={styles.publishText}>{posted && !voiceUri ? "Post Another" : "Post Moment"}</Text>
         </Pressable>
       </ScrollView>
     </KeyboardAvoidingView>
   );
+}
+
+function formatVisibility(visibility) {
+  if (visibility === "public") return "Everyone";
+  if (visibility === "private") return "Only me";
+  if (visibility === "close") return "Close friends";
+  return "Friends";
 }

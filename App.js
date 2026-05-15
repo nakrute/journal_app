@@ -1,36 +1,36 @@
-import { Ionicons } from "@expo/vector-icons";
 import { Audio } from "expo-av";
 import { useCameraPermissions } from "expo-camera";
+import * as ImagePicker from "expo-image-picker";
 import { StatusBar } from "expo-status-bar";
 import { useEffect, useRef, useState } from "react";
-import { Alert, Pressable, Share, Text, View } from "react-native";
+import { Alert, Share } from "react-native";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
-import { TabButton } from "./components/Buttons";
+import { ErrorBoundary } from "./components/ErrorBoundary";
+import { VOICE_MAX_SECONDS } from "./constants/app";
 import { useActivityLog } from "./hooks/useActivityLog";
 import { defaultProfile, useAppSettings } from "./hooks/useAppSettings";
 import { useDailyDrop } from "./hooks/useDailyDrop";
 import { useDailyReminderNotifications } from "./hooks/useDailyReminderNotifications";
 import { useDraftComposer } from "./hooks/useDraftComposer";
 import { useLocalPosts } from "./hooks/useLocalPosts";
+import { useLocalReports } from "./hooks/useLocalReports";
 import { useLocalSocial } from "./hooks/useLocalSocial";
-import { FeedScreen } from "./screens/FeedScreen";
+import { AppNavigator } from "./navigation/AppNavigator";
 import { LockScreen } from "./screens/LockScreen";
 import { OnboardingScreen } from "./screens/OnboardingScreen";
-import { PostDetailScreen } from "./screens/PostDetailScreen";
-import { PostsScreen } from "./screens/PostsScreen";
-import { ProfileScreen } from "./screens/ProfileScreen";
-import { TodayScreen } from "./screens/TodayScreen";
 import { ThemeProvider, useStyles } from "./theme";
 import { deleteMedia, preserveMedia } from "./utils/media";
 import { validateDraftPost } from "./utils/validation";
-import { formatSeconds } from "./utils/time";
+import { createPostDraft } from "./services/postsService";
 
 export default function App() {
   const appSettings = useAppSettings();
 
   return (
     <ThemeProvider isDarkMode={appSettings.isDarkMode}>
-      <AppShell appSettings={appSettings} />
+      <ErrorBoundary>
+        <AppShell appSettings={appSettings} />
+      </ErrorBoundary>
     </ThemeProvider>
   );
 }
@@ -41,6 +41,7 @@ function AppShell({ appSettings }) {
     isDarkMode,
     privacySettings,
     profile,
+    safetySettings,
     securitySettings,
     setHasSeenOnboarding,
     setIsDarkMode,
@@ -52,11 +53,9 @@ function AppShell({ appSettings }) {
   const styles = useStyles();
   const cameraRef = useRef(null);
   const [cameraPermission, requestCameraPermission] = useCameraPermissions();
-  const [activeTab, setActiveTab] = useState("today");
-  const [lastContentTab, setLastContentTab] = useState("today");
-  const [selectedPost, setSelectedPost] = useState(null);
   const [cameraFacing, setCameraFacing] = useState("back");
   const [recording, setRecording] = useState(null);
+  const [recordingStatus, setRecordingStatus] = useState("idle");
   const [sound, setSound] = useState(null);
   const [playbackUri, setPlaybackUri] = useState(null);
   const [playbackStatus, setPlaybackStatus] = useState({
@@ -76,7 +75,9 @@ function AppShell({ appSettings }) {
     setAddToPosts,
     setCaption,
     setCapturedPhoto,
+    setVisibility,
     setVoiceUri,
+    visibility,
     voiceUri
   } = useDraftComposer();
   const {
@@ -90,6 +91,7 @@ function AppShell({ appSettings }) {
     setGeneralPosts,
     updatePostCaption
   } = useLocalPosts(logEvent);
+  const { reportContent, reports } = useLocalReports(logEvent);
   const {
     acceptFriendRequest,
     addFriend,
@@ -100,14 +102,17 @@ function AppShell({ appSettings }) {
     removeFriend,
     restoreDemoSocialData,
     setFriends,
-    simulateNewFriendPost
+    simulateNewFriendPost,
+    toggleFriendCloseStatus
   } = useLocalSocial(logEvent);
   const { isLate, prompt, secondsRemaining } = useDailyDrop();
   const {
     changeReminderTime,
     notificationSettings,
     sendTestNotification: handleSendTestNotification,
-    toggleDailyReminder
+    toggleDailyReminder,
+    toggleNotificationPreference,
+    updateQuietHours
   } = useDailyReminderNotifications();
 
   const permissionStatuses = {
@@ -136,14 +141,20 @@ function AppShell({ appSettings }) {
   }, [recording]);
 
   useEffect(() => {
+    if (recording && recordingSeconds >= VOICE_MAX_SECONDS) {
+      stopRecording();
+    }
+  }, [recording, recordingSeconds]);
+
+  useEffect(() => {
     if (!securitySettings.appLockEnabled) {
       setIsUnlocked(true);
     }
   }, [securitySettings.appLockEnabled]);
 
   useEffect(() => {
-    cleanupPostMedia([capturedPhoto, voiceUri]).catch(() => {});
-  }, [capturedPhoto, cleanupPostMedia, voiceUri]);
+    cleanupPostMedia([capturedPhoto, voiceUri, profile.avatarUri]).catch(() => {});
+  }, [capturedPhoto, cleanupPostMedia, profile.avatarUri, voiceUri]);
 
   async function takePhoto() {
     if (recording) {
@@ -212,6 +223,7 @@ function AppShell({ appSettings }) {
     await unloadCurrentSound();
     await deleteMedia(voiceUri);
     setVoiceUri(null);
+    setRecordingStatus("recording");
     logEvent("Started voice recording");
 
     await Audio.setAudioModeAsync({
@@ -226,6 +238,7 @@ function AppShell({ appSettings }) {
       );
       setRecording(nextRecording);
     } catch (error) {
+      setRecordingStatus("failed");
       Alert.alert("Recording issue", "OutLoud could not start recording. Check microphone access and try again.");
       logEvent("Voice recording failed to start");
     }
@@ -234,6 +247,7 @@ function AppShell({ appSettings }) {
   async function stopRecording() {
     if (!recording) return;
     let nextVoiceUri = null;
+    setRecordingStatus("saving");
 
     try {
       await recording.stopAndUnloadAsync();
@@ -241,10 +255,12 @@ function AppShell({ appSettings }) {
       nextVoiceUri = await preserveMedia(uri, "voice");
       setRecording(null);
       setVoiceUri(nextVoiceUri);
+      setRecordingStatus("ready");
       resetPlaybackStatus();
       logEvent("Saved voice recording");
     } catch (error) {
       setRecording(null);
+      setRecordingStatus("failed");
       Alert.alert("Recording issue", "OutLoud could not save that voice note. Try recording again.");
       logEvent("Voice recording failed to save");
       return;
@@ -331,17 +347,10 @@ function AppShell({ appSettings }) {
     const validationMessage = validateDraftPost({ capturedPhoto, voiceUri, caption });
     if (validationMessage) {
       Alert.alert("Almost there", validationMessage);
-      return;
+      return false;
     }
 
-    const nextPost = {
-      id: `post-${Date.now()}`,
-      caption: caption.trim() || "My real moment.",
-      photo: capturedPhoto,
-      prompt,
-      date: new Date().toISOString(),
-      voiceUri
-    };
+    const nextPost = createPostDraft({ caption, capturedPhoto, prompt, visibility, voiceUri });
 
     savePost(nextPost, {
       addToPosts,
@@ -358,30 +367,14 @@ function AppShell({ appSettings }) {
 
     resetDraft();
     setPlaybackUri(nextPost.voiceUri);
-    openTab("feed");
-  }
-
-  function openTab(tab) {
-    setActiveTab(tab);
-    if (tab !== "profile") {
-      setLastContentTab(tab);
-    }
-  }
-
-  function toggleProfileMenu() {
-    if (activeTab === "profile") {
-      openTab(lastContentTab);
-      return;
-    }
-
-    setLastContentTab(activeTab);
-    setActiveTab("profile");
+    return true;
   }
 
   async function discardDraft() {
     await deleteMedia(capturedPhoto);
     await deleteMedia(voiceUri);
     resetDraft();
+    setRecordingStatus("idle");
     setPlaybackUri(null);
     resetPlaybackStatus();
     logEvent("Discarded draft");
@@ -397,6 +390,7 @@ function AppShell({ appSettings }) {
     await deleteMedia(voiceUri);
     setVoiceUri(null);
     setPlaybackUri(null);
+    setRecordingStatus("idle");
     resetPlaybackStatus();
     logEvent("Removed draft voice note");
   }
@@ -424,6 +418,46 @@ function AppShell({ appSettings }) {
     restoreDemoSocialData();
     setProfile(defaultProfile);
     logEvent("Restored demo data");
+  }
+
+  async function pickProfilePhoto() {
+    try {
+      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permission.granted) {
+        Alert.alert("Photo access needed", "Enable photo access to choose a profile picture.");
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        allowsEditing: true,
+        aspect: [1, 1],
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        quality: 0.8
+      });
+
+      if (result.canceled || !result.assets?.[0]?.uri) return;
+
+      const savedAvatarUri = await preserveMedia(result.assets[0].uri, "photo");
+      await deleteMedia(profile.avatarUri);
+      setProfile((current) => ({ ...current, avatarUri: savedAvatarUri }));
+      logEvent("Updated profile photo");
+    } catch (error) {
+      Alert.alert("Photo issue", "OutLoud could not update that profile photo.");
+      logEvent("Profile photo update failed");
+    }
+  }
+
+  function reportItem(item) {
+    Alert.alert("Report", `Report ${item.name}?`, [
+      { text: "Cancel", style: "cancel" },
+      { text: "Spam", onPress: () => reportContent(item, "Spam") },
+      { text: "Safety", style: "destructive", onPress: () => reportContent(item, "Safety concern") }
+    ]);
+  }
+
+  function handleTogglePrivacySetting(field) {
+    togglePrivacySetting(field);
+    logEvent(`Toggled ${field}`);
   }
 
   function handleSimulateNewFriendPost() {
@@ -493,170 +527,101 @@ function AppShell({ appSettings }) {
       <SafeAreaProvider>
         <SafeAreaView style={styles.shell} edges={["top", "bottom"]}>
           <StatusBar style={isDarkMode ? "light" : "dark"} />
-          <OnboardingScreen onComplete={() => setHasSeenOnboarding(true)} />
+          <OnboardingScreen
+            notificationSettings={notificationSettings}
+            onChangeProfile={setProfile}
+            onComplete={() => setHasSeenOnboarding(true)}
+            onPickProfilePhoto={pickProfilePhoto}
+            onRequestCameraPermission={requestCameraPermission}
+            onRequestMicrophonePermission={requestMicrophonePermission}
+            onToggleDailyReminder={toggleDailyReminder}
+            profile={profile}
+          />
         </SafeAreaView>
       </SafeAreaProvider>
     );
   }
 
+  const screenContext = {
+    acceptFriendRequest,
+    activityLog,
+    addFriend,
+    addToPosts,
+    blockFriend,
+    cameraFacing,
+    cameraPermission,
+    cameraRef,
+    caption,
+    capturedPhoto,
+    changeReminderTime,
+    clearActivityLog,
+    clearLocalPosts,
+    declineFriendRequest,
+    deletePost,
+    discardDraft,
+    friendRequests,
+    friends,
+    generalPosts,
+    handleSendTestNotification,
+    handleSimulateNewFriendPost,
+    isDarkMode,
+    isLate,
+    notificationSettings,
+    permissionStatuses,
+    pickProfilePhoto,
+    playbackStatus,
+    playbackUri,
+    privacySettings,
+    profile,
+    publishMoment,
+    prompt,
+    promptHistory,
+    publishedPost,
+    recording,
+    recordingSeconds,
+    recordingStatus,
+    removeDraftPhoto,
+    removeDraftVoice,
+    removeFriend,
+    reportItem,
+    reports,
+    requestCameraPermission,
+    requestMicrophonePermission,
+    resetOnboarding,
+    restoreDemoData,
+    runBugScenario,
+    safetySettings,
+    securitySettings,
+    secondsRemaining,
+    setAddToPosts,
+    setCameraFacing,
+    setCaption,
+    setGeneralPosts,
+    setHasSeenOnboarding,
+    setIsDarkMode,
+    setProfile,
+    setVisibility,
+    sharePost,
+    stopRecording,
+    startRecording,
+    takePhoto,
+    toggleDailyReminder,
+    toggleFriendCloseStatus,
+    toggleNotificationPreference,
+    togglePrivacySetting: handleTogglePrivacySetting,
+    toggleVoicePlayback,
+    updatePostCaption,
+    updateQuietHours,
+    updateSecuritySettingsAndUnlock,
+    visibility,
+    voiceUri
+  };
+
   return (
     <SafeAreaProvider>
       <SafeAreaView style={styles.shell} edges={["top", "bottom"]}>
         <StatusBar style={isDarkMode ? "light" : "dark"} />
-        <View style={styles.header}>
-          <View style={styles.headerIdentity}>
-            <Pressable style={styles.menuButton} onPress={toggleProfileMenu}>
-              <Ionicons
-                name={activeTab === "profile" ? "close-outline" : "menu-outline"}
-                size={25}
-                color={isDarkMode ? "#f8f7f2" : "#111"}
-              />
-            </Pressable>
-            <View>
-              <Text style={styles.logo}>OutLoud</Text>
-              <Text style={styles.subtle}>Daily candid photo + voice notes</Text>
-            </View>
-          </View>
-          <View style={[styles.timerPill, isLate && styles.lateTimerPill]}>
-            <Ionicons name={isLate ? "alert-circle-outline" : "timer-outline"} size={16} color="#111" />
-            <Text style={styles.timerText}>{isLate ? "Late" : formatSeconds(secondsRemaining)}</Text>
-          </View>
-        </View>
-
-        {activeTab === "today" ? (
-          <TodayScreen
-            addToPosts={addToPosts}
-            cameraFacing={cameraFacing}
-            cameraPermission={cameraPermission}
-            cameraRef={cameraRef}
-            capturedPhoto={capturedPhoto}
-            onFlip={() => setCameraFacing((value) => (value === "back" ? "front" : "back"))}
-            onPlayVoice={() => toggleVoicePlayback(voiceUri)}
-            onPublish={publishMoment}
-            onRecord={recording ? stopRecording : startRecording}
-            onDiscardDraft={discardDraft}
-            onRemovePhoto={removeDraftPhoto}
-            onRemoveVoice={removeDraftVoice}
-            onRetake={removeDraftPhoto}
-            onTakePhoto={takePhoto}
-            onToggleAddToPosts={() => setAddToPosts((value) => !value)}
-            caption={caption}
-            isLate={isLate}
-            onChangeCaption={setCaption}
-            posted={!!publishedPost}
-            playbackStatus={playbackStatus}
-            playbackUri={playbackUri}
-            prompt={prompt}
-            recording={recording}
-            recordingSeconds={recordingSeconds}
-            requestCameraPermission={requestCameraPermission}
-            voiceUri={voiceUri}
-          />
-        ) : activeTab === "feed" ? (
-          <FeedScreen
-            friends={friends}
-            publishedPost={publishedPost}
-            profile={profile}
-            playbackStatus={playbackStatus}
-            onPlayVoice={toggleVoicePlayback}
-            playbackUri={playbackUri}
-            onEditPostCaption={(postId, nextCaption) =>
-              updatePostCaption(postId, nextCaption, setSelectedPost)
-            }
-            onDeletePost={(postId) => deletePost(postId, setSelectedPost)}
-            onOpenPost={setSelectedPost}
-          />
-        ) : activeTab === "posts" ? (
-          <PostsScreen
-            posts={generalPosts}
-            profile={profile}
-            playbackStatus={playbackStatus}
-            onPlayVoice={toggleVoicePlayback}
-            playbackUri={playbackUri}
-            onEditPostCaption={(postId, nextCaption) =>
-              updatePostCaption(postId, nextCaption, setSelectedPost)
-            }
-            onDeletePost={(postId) => deletePost(postId, setSelectedPost)}
-            onOpenPost={setSelectedPost}
-          />
-        ) : (
-          <ProfileScreen
-            friendRequests={friendRequests}
-            friends={friends}
-            isDarkMode={isDarkMode}
-            notificationSettings={notificationSettings}
-            onAcceptFriendRequest={acceptFriendRequest}
-            onAddFriend={addFriend}
-            onBlockFriend={blockFriend}
-            onClearLocalPosts={() => clearLocalPosts(setSelectedPost)}
-            onClearActivityLog={clearActivityLog}
-            onChangeReminderTime={changeReminderTime}
-            onChangeProfile={setProfile}
-            onClose={toggleProfileMenu}
-            onDeclineFriendRequest={declineFriendRequest}
-            onRequestCameraPermission={requestCameraPermission}
-            onRequestMicrophonePermission={requestMicrophonePermission}
-            onRemoveFriend={removeFriend}
-            onResetOnboarding={resetOnboarding}
-            onRestoreDemoData={restoreDemoData}
-            onRunBugScenario={runBugScenario}
-            onSendTestNotification={handleSendTestNotification}
-            onSimulateFriendPost={handleSimulateNewFriendPost}
-            onTogglePrivacySetting={(field) => {
-              togglePrivacySetting(field);
-              logEvent(`Toggled ${field}`);
-            }}
-            onToggleDarkMode={() => setIsDarkMode((value) => !value)}
-            onToggleDailyReminder={toggleDailyReminder}
-            onUpdateSecuritySettings={updateSecuritySettingsAndUnlock}
-            permissionStatuses={permissionStatuses}
-            activityLog={activityLog}
-            profile={profile}
-            privacySettings={privacySettings}
-            promptHistory={promptHistory}
-            securitySettings={securitySettings}
-          />
-        )}
-
-        {selectedPost ? (
-          <View style={styles.detailOverlay}>
-            <SafeAreaView style={styles.shell} edges={["top", "bottom"]}>
-              <PostDetailScreen
-                item={selectedPost}
-                onBack={() => setSelectedPost(null)}
-                onDelete={(postId) => deletePost(postId, setSelectedPost)}
-                onEditCaption={(postId, nextCaption) =>
-                  updatePostCaption(postId, nextCaption, setSelectedPost)
-                }
-                onPlayVoice={toggleVoicePlayback}
-                onShare={sharePost}
-                playbackStatus={playbackStatus}
-                playbackUri={playbackUri}
-              />
-            </SafeAreaView>
-          </View>
-        ) : null}
-
-        <View style={styles.tabs}>
-          <TabButton
-            icon="radio-outline"
-            label="Today"
-            active={activeTab === "today"}
-            onPress={() => openTab("today")}
-          />
-          <TabButton
-            icon="people-outline"
-            label="Friends"
-            active={activeTab === "feed"}
-            onPress={() => openTab("feed")}
-          />
-          <TabButton
-            icon="albums-outline"
-            label="Posts"
-            active={activeTab === "posts"}
-            onPress={() => openTab("posts")}
-          />
-        </View>
+        <AppNavigator context={screenContext} />
       </SafeAreaView>
     </SafeAreaProvider>
   );

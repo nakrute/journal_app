@@ -13,9 +13,14 @@ import { usePersistedState } from "./usePersistedState";
 
 const initialNotificationSettings = {
   enabled: false,
+  friendPostsEnabled: true,
+  friendRequestsEnabled: true,
   hour: 18,
   minute: 0,
   permissionStatus: "unknown",
+  quietHoursEnabled: false,
+  quietHoursEnd: "08:00",
+  quietHoursStart: "22:00",
   scheduledId: null
 };
 
@@ -134,11 +139,27 @@ export function useDailyReminderNotifications() {
     }
   }
 
+  function toggleNotificationPreference(field) {
+    setNotificationSettings((current) => ({
+      ...current,
+      [field]: !current[field]
+    }));
+  }
+
+  function updateQuietHours(field, value) {
+    setNotificationSettings((current) => ({
+      ...current,
+      [field]: value
+    }));
+  }
+
   return {
     changeReminderTime,
     notificationSettings,
     sendTestNotification: handleSendTestNotification,
-    toggleDailyReminder
+    toggleDailyReminder,
+    toggleNotificationPreference,
+    updateQuietHours
   };
 }
 

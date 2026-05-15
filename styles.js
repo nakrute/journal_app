@@ -61,7 +61,7 @@ export const styles = StyleSheet.create({
   },
   content: {
     padding: 20,
-    paddingBottom: 180
+    paddingBottom: 40
   },
   onboarding: {
     flex: 1,
@@ -92,6 +92,29 @@ export const styles = StyleSheet.create({
     color: "#e8e3d7",
     fontSize: 15,
     lineHeight: 22
+  },
+  brandMark: {
+    alignItems: "center",
+    backgroundColor: "#e8ff66",
+    borderRadius: 999,
+    flexDirection: "row",
+    gap: 6,
+    justifyContent: "center",
+    minHeight: 52,
+    paddingHorizontal: 14,
+    alignSelf: "flex-start"
+  },
+  compactBrandMark: {
+    minHeight: 36,
+    paddingHorizontal: 10
+  },
+  brandMarkText: {
+    color: "#111",
+    fontSize: 18,
+    fontWeight: "900"
+  },
+  compactBrandMarkText: {
+    fontSize: 13
   },
   onboardingList: {
     gap: 12
@@ -326,7 +349,7 @@ export const styles = StyleSheet.create({
   feed: {
     gap: 16,
     padding: 20,
-    paddingBottom: 120
+    paddingBottom: 32
   },
   emptyPanel: {
     alignItems: "center",
@@ -436,6 +459,11 @@ export const styles = StyleSheet.create({
   profileField: {
     gap: 8
   },
+  setupAvatarRow: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: 14
+  },
   profileLabel: {
     color: "#67645e",
     fontSize: 12,
@@ -509,6 +537,11 @@ export const styles = StyleSheet.create({
     transform: [{ translateX: 24 }]
   },
   reminderTimes: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8
+  },
+  visibilityOptions: {
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 8
@@ -708,6 +741,13 @@ export const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "700"
   },
+  visibilityText: {
+    color: "#2f6f56",
+    fontSize: 12,
+    fontWeight: "900",
+    marginTop: 8,
+    textTransform: "uppercase"
+  },
   caption: {
     color: "#25231f",
     fontSize: 15,
@@ -859,6 +899,26 @@ export const styles = StyleSheet.create({
     padding: 6,
     position: "absolute",
     right: 20
+  },
+  navTabs: {
+    backgroundColor: "#fff",
+    borderColor: "#dfdcd2",
+    borderTopWidth: 1,
+    elevation: 0,
+    height: 66,
+    paddingBottom: 8,
+    paddingTop: 6,
+    shadowOpacity: 0
+  },
+  navTabItem: {
+    borderRadius: 8,
+    marginHorizontal: 4,
+    minHeight: 52
+  },
+  navTabLabel: {
+    fontSize: 12,
+    fontWeight: "800",
+    marginTop: 2
   },
   tabButton: {
     alignItems: "center",
@@ -1044,6 +1104,9 @@ const darkStyles = StyleSheet.create({
   time: {
     color: "#aaa59a"
   },
+  visibilityText: {
+    color: "#8fc7a8"
+  },
   caption: {
     color: "#e8e3d7"
   },
@@ -1057,6 +1120,10 @@ const darkStyles = StyleSheet.create({
     color: "#f8f7f2"
   },
   tabs: {
+    backgroundColor: "#1c1d1a",
+    borderColor: "#30322d"
+  },
+  navTabs: {
     backgroundColor: "#1c1d1a",
     borderColor: "#30322d"
   },

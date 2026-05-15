@@ -1,5 +1,6 @@
 import { incomingFriendRequests as starterFriendRequests, friends as starterFriends } from "../data/friends";
-import { formatHandle, getNameFromHandle } from "../utils/formatting";
+import { createFriendFromHandle, friendExists, toggleCloseFriend } from "../services/friendsService";
+import { formatHandle } from "../utils/formatting";
 import { usePersistedState } from "./usePersistedState";
 
 export function useLocalSocial(logEvent) {
@@ -14,17 +15,10 @@ export function useLocalSocial(logEvent) {
     if (!normalizedHandle) return;
 
     setFriends((currentFriends) => {
-      if (currentFriends.some((friend) => friend.handle === normalizedHandle)) return currentFriends;
+      if (friendExists(currentFriends, normalizedHandle)) return currentFriends;
 
-      return [
-        {
-          id: `friend-${Date.now()}`,
-          name: getNameFromHandle(normalizedHandle),
-          handle: normalizedHandle,
-          avatarUri: ""
-        },
-        ...currentFriends
-      ];
+      const friend = createFriendFromHandle(normalizedHandle);
+      return friend ? [friend, ...currentFriends] : currentFriends;
     });
     logEvent(`Added friend ${normalizedHandle}`);
   }
@@ -54,6 +48,11 @@ export function useLocalSocial(logEvent) {
     logEvent("Blocked friend");
   }
 
+  function toggleFriendCloseStatus(friendId) {
+    setFriends((currentFriends) => toggleCloseFriend(currentFriends, friendId));
+    logEvent("Updated close friends");
+  }
+
   function restoreDemoSocialData() {
     setFriends(starterFriends);
     setFriendRequests(starterFriendRequests);
@@ -70,6 +69,7 @@ export function useLocalSocial(logEvent) {
       time: "now",
       photo: "https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=900&q=80",
       caption: "Mock post just dropped.",
+      isCloseFriend: false,
       voice: "0:15",
       playable: false
     };
@@ -88,6 +88,7 @@ export function useLocalSocial(logEvent) {
     removeFriend,
     restoreDemoSocialData,
     setFriends,
-    simulateNewFriendPost
+    simulateNewFriendPost,
+    toggleFriendCloseStatus
   };
 }
