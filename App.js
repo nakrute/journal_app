@@ -6,7 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import { Alert, Share } from "react-native";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import { ErrorBoundary } from "./components/ErrorBoundary";
-import { VOICE_MAX_SECONDS } from "./constants/app";
+import { BETA_INVITE_CODE, DEFAULT_BETA_ACCESS, VOICE_MAX_SECONDS } from "./constants/app";
 import { useActivityLog } from "./hooks/useActivityLog";
 import { defaultProfile, useAppSettings } from "./hooks/useAppSettings";
 import { useDailyDrop } from "./hooks/useDailyDrop";
@@ -16,7 +16,7 @@ import { useLocalPosts } from "./hooks/useLocalPosts";
 import { useLocalReports } from "./hooks/useLocalReports";
 import { useLocalSocial } from "./hooks/useLocalSocial";
 import { AppNavigator } from "./navigation/AppNavigator";
-import { LockScreen } from "./screens/LockScreen";
+import { BetaAccessScreen } from "./screens/BetaAccessScreen";
 import { OnboardingScreen } from "./screens/OnboardingScreen";
 import { ThemeProvider, useStyles } from "./theme";
 import { deleteMedia, preserveMedia } from "./utils/media";
@@ -37,18 +37,20 @@ export default function App() {
 
 function AppShell({ appSettings }) {
   const {
+    betaAccess,
     hasSeenOnboarding,
     isDarkMode,
     privacySettings,
     profile,
     safetySettings,
-    securitySettings,
     setHasSeenOnboarding,
     setIsDarkMode,
     setProfile,
     storageReady,
     togglePrivacySetting,
-    updateSecuritySettings
+    toggleSafetySetting,
+    updateBetaAccess,
+    updatePrivacySetting
   } = appSettings;
   const styles = useStyles();
   const cameraRef = useRef(null);
@@ -63,7 +65,6 @@ function AppShell({ appSettings }) {
     isPlaying: false,
     positionMillis: 0
   });
-  const [isUnlocked, setIsUnlocked] = useState(false);
   const [recordingSeconds, setRecordingSeconds] = useState(0);
   const [microphonePermissionStatus, setMicrophonePermissionStatus] = useState("unknown");
   const { activityLog, clearActivityLog, logEvent } = useActivityLog();
@@ -87,8 +88,10 @@ function AppShell({ appSettings }) {
     generalPosts,
     promptHistory,
     publishedPost,
+    retryPostUpload,
     savePost,
     setGeneralPosts,
+    simulatePostUploadFailure,
     updatePostCaption
   } = useLocalPosts(logEvent);
   const { reportContent, reports } = useLocalReports(logEvent);
@@ -96,16 +99,21 @@ function AppShell({ appSettings }) {
     acceptFriendRequest,
     addFriend,
     blockFriend,
+    blockedProfiles,
+    cancelFriendRequest,
+    clearLocalSocialData,
     declineFriendRequest,
     friendRequests,
     friends,
+    outgoingFriendRequests,
     removeFriend,
     restoreDemoSocialData,
     setFriends,
     simulateNewFriendPost,
-    toggleFriendCloseStatus
+    toggleFriendCloseStatus,
+    unblockProfile
   } = useLocalSocial(logEvent);
-  const { isLate, prompt, secondsRemaining } = useDailyDrop();
+  const { prompt } = useDailyDrop();
   const {
     changeReminderTime,
     notificationSettings,
@@ -147,14 +155,12 @@ function AppShell({ appSettings }) {
   }, [recording, recordingSeconds]);
 
   useEffect(() => {
-    if (!securitySettings.appLockEnabled) {
-      setIsUnlocked(true);
-    }
-  }, [securitySettings.appLockEnabled]);
-
-  useEffect(() => {
     cleanupPostMedia([capturedPhoto, voiceUri, profile.avatarUri]).catch(() => {});
   }, [capturedPhoto, cleanupPostMedia, profile.avatarUri, voiceUri]);
+
+  useEffect(() => {
+    setVisibility(privacySettings.defaultPostVisibility);
+  }, [privacySettings.defaultPostVisibility, setVisibility]);
 
   async function takePhoto() {
     if (recording) {
@@ -401,14 +407,6 @@ function AppShell({ appSettings }) {
     logEvent(`Microphone permission ${permission.status}`);
   }
 
-  function updateSecuritySettingsAndUnlock(nextSettings) {
-    updateSecuritySettings(nextSettings);
-    if (nextSettings.appLockEnabled === false) {
-      setIsUnlocked(true);
-    }
-    logEvent("Updated app lock settings");
-  }
-
   function resetOnboarding() {
     setHasSeenOnboarding(false);
     logEvent("Reset onboarding");
@@ -460,6 +458,103 @@ function AppShell({ appSettings }) {
     logEvent(`Toggled ${field}`);
   }
 
+  function handleToggleSafetySetting(field) {
+    toggleSafetySetting(field);
+    logEvent(`Toggled safety ${field}`);
+  }
+
+  function handleUpdatePrivacySetting(field, value) {
+    updatePrivacySetting(field, value);
+    logEvent(`Updated privacy ${field}`);
+  }
+
+  function handleUpdateBetaAccess(nextSettings) {
+    updateBetaAccess(nextSettings);
+    logEvent("Updated beta access settings");
+  }
+
+  function submitBetaCode(code) {
+    if (code.trim().toUpperCase() !== BETA_INVITE_CODE) {
+      Alert.alert("Invite code needed", "That beta code did not match. Try OUTLOUD-BETA for this local build.");
+      return;
+    }
+
+    updateBetaAccess({
+      acceptedAt: new Date().toISOString(),
+      acceptedCode: code.trim()
+    });
+    logEvent("Unlocked beta access");
+  }
+
+  async function exportLocalData() {
+    const exportPayload = {
+      exportedAt: new Date().toISOString(),
+      profile,
+      privacySettings,
+      safetySettings,
+      betaAccess,
+      publishedPost,
+      generalPosts,
+      promptHistory,
+      friends,
+      friendRequests,
+      outgoingFriendRequests,
+      blockedProfiles,
+      reports,
+      activityLog
+    };
+
+    await Share.share({
+      message: `OutLoud local data export\n\n${JSON.stringify(exportPayload, null, 2)}`
+    });
+    logEvent("Exported local data summary");
+  }
+
+  function deleteLocalAccount() {
+    Alert.alert(
+      "Delete local account?",
+      "This resets your dummy profile, local posts, draft, friends, and onboarding on this device.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            await clearLocalPosts();
+            await discardDraft();
+            clearActivityLog();
+            clearLocalSocialData();
+            setProfile(defaultProfile);
+            setHasSeenOnboarding(false);
+            updateBetaAccess(DEFAULT_BETA_ACCESS);
+            logEvent("Deleted local account data");
+          }
+        }
+      ]
+    );
+  }
+
+  function signOutDummyProfile() {
+    Alert.alert("Dummy profile only", "Real sign out will be added with Google or Supabase auth.");
+    logEvent("Viewed dummy sign-out placeholder");
+  }
+
+  function openLegalPlaceholder(kind) {
+    const title = kind === "terms" ? "Terms placeholder" : "Privacy placeholder";
+    const body =
+      kind === "terms"
+        ? "Production terms will cover posting rules, account use, reporting, and acceptable content."
+        : "Production privacy copy will explain account data, photos, voice notes, notifications, retention, and deletion.";
+
+    Alert.alert(title, body);
+    logEvent(`Viewed ${kind} placeholder`);
+  }
+
+  function contactSupportPlaceholder() {
+    Alert.alert("Support", `For this prototype, support routes to ${safetySettings.supportEmail}.`);
+    logEvent("Viewed support contact");
+  }
+
   function handleSimulateNewFriendPost() {
     const post = simulateNewFriendPost();
     Alert.alert("New friend post", `${post.name} posted a new mock check-in.`);
@@ -492,6 +587,14 @@ function AppShell({ appSettings }) {
       setCaption("This is a deliberately long caption for testing how the composer behaves when someone writes right up to the limit.");
       logEvent("Bug bash: long caption");
     }
+    if (scenario === "uploadFailure") {
+      const postId = publishedPost?.id || generalPosts[0]?.id;
+      if (!postId) {
+        Alert.alert("No post to fail", "Create a local post first, then run this upload scenario.");
+        return;
+      }
+      simulatePostUploadFailure(postId);
+    }
   }
 
   async function sharePost(item) {
@@ -511,12 +614,12 @@ function AppShell({ appSettings }) {
     );
   }
 
-  if (securitySettings.appLockEnabled && !isUnlocked && hasSeenOnboarding) {
+  if (betaAccess.requireInvite && !betaAccess.acceptedAt) {
     return (
       <SafeAreaProvider>
         <SafeAreaView style={styles.shell} edges={["top", "bottom"]}>
           <StatusBar style={isDarkMode ? "light" : "dark"} />
-          <LockScreen pin={securitySettings.pin} onUnlock={() => setIsUnlocked(true)} />
+          <BetaAccessScreen onSubmitCode={submitBetaCode} />
         </SafeAreaView>
       </SafeAreaProvider>
     );
@@ -547,7 +650,9 @@ function AppShell({ appSettings }) {
     activityLog,
     addFriend,
     addToPosts,
+    betaAccess,
     blockFriend,
+    blockedProfiles,
     cameraFacing,
     cameraPermission,
     cameraRef,
@@ -565,8 +670,8 @@ function AppShell({ appSettings }) {
     handleSendTestNotification,
     handleSimulateNewFriendPost,
     isDarkMode,
-    isLate,
     notificationSettings,
+    outgoingFriendRequests,
     permissionStatuses,
     pickProfilePhoto,
     playbackStatus,
@@ -591,8 +696,7 @@ function AppShell({ appSettings }) {
     restoreDemoData,
     runBugScenario,
     safetySettings,
-    securitySettings,
-    secondsRemaining,
+    retryPostUpload,
     setAddToPosts,
     setCameraFacing,
     setCaption,
@@ -609,10 +713,19 @@ function AppShell({ appSettings }) {
     toggleFriendCloseStatus,
     toggleNotificationPreference,
     togglePrivacySetting: handleTogglePrivacySetting,
+    toggleSafetySetting: handleToggleSafetySetting,
     toggleVoicePlayback,
+    updateBetaAccess: handleUpdateBetaAccess,
     updatePostCaption,
+    updatePrivacySetting: handleUpdatePrivacySetting,
     updateQuietHours,
-    updateSecuritySettingsAndUnlock,
+    cancelFriendRequest,
+    unblockProfile,
+    exportLocalData,
+    deleteLocalAccount,
+    signOutDummyProfile,
+    openLegalPlaceholder,
+    contactSupportPlaceholder,
     visibility,
     voiceUri
   };

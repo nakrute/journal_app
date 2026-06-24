@@ -1,4 +1,5 @@
 import { createLocalId, createTimestamp } from "./ids";
+import { createBackendMeta, UPLOAD_STATUS } from "./mockBackend";
 
 export function createPostDraft({ caption, capturedPhoto, prompt, visibility, voiceUri }) {
   return {
@@ -8,7 +9,8 @@ export function createPostDraft({ caption, capturedPhoto, prompt, visibility, vo
     prompt,
     date: createTimestamp(),
     visibility: visibility || "friends",
-    voiceUri
+    voiceUri,
+    ...createBackendMeta("post", UPLOAD_STATUS.queued)
   };
 }
 
@@ -24,7 +26,12 @@ export function archivePromptFromPost(post, prompt, savedToPosts) {
 
 export function updatePostCaption(post, postId, nextCaption) {
   if (!post || post.id !== postId) return post;
-  return { ...post, caption: normalizeCaption(nextCaption) };
+  return {
+    ...post,
+    caption: normalizeCaption(nextCaption),
+    syncError: null,
+    uploadStatus: post.uploadStatus === UPLOAD_STATUS.uploaded ? UPLOAD_STATUS.queued : post.uploadStatus
+  };
 }
 
 export function updatePostCaptionList(posts, postId, nextCaption) {

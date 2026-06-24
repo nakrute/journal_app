@@ -21,7 +21,6 @@ export function TodayScreen({
   cameraPermission,
   cameraRef,
   capturedPhoto,
-  isLate,
   onFlip,
   onPlayVoice,
   onPublish,
@@ -66,11 +65,12 @@ export function TodayScreen({
       style={styles.keyboardAvoider}
     >
       <ScrollView
+        style={styles.screen}
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
       >
         <View style={styles.promptBand}>
-          <Text style={styles.promptLabel}>{isLate ? "Late post" : "Today's drop"}</Text>
+          <Text style={styles.promptLabel}>New post</Text>
           <Text style={styles.prompt}>{prompt}</Text>
         </View>
 

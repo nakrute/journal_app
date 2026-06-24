@@ -12,7 +12,7 @@ OutLoud is a mobile-first MVP inspired by spontaneous daily photo apps, with voi
 - First-run onboarding
 - Local post editing and deletion
 - Post detail view with voice playback
-- Permission status cards, privacy toggles, demo reset controls, and optional local PIN lock
+- Permission status cards, privacy toggles, and demo reset controls
 - Prompt history for recent daily check-ins
 - Local activity log and bug-bash tools for stress testing states
 - App-owned media copies for captured photos and voice notes
@@ -20,6 +20,7 @@ OutLoud is a mobile-first MVP inspired by spontaneous daily photo apps, with voi
 - Mock new-friend-post simulator
 - Local daily reminder notifications
 - Local prototype state for posting your own moment
+- Real-user readiness placeholders for beta access, account data controls, privacy, safety, support, and backend auth/session notes
 
 ## Run it
 

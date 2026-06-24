@@ -1,4 +1,9 @@
 import { useEffect, useState } from "react";
+import {
+  DEFAULT_BETA_ACCESS,
+  DEFAULT_PRIVACY_SETTINGS,
+  DEFAULT_SAFETY_SETTINGS
+} from "../constants/app";
 import { ensureStorageVersion } from "../utils/storage";
 import { usePersistedState } from "./usePersistedState";
 
@@ -14,22 +19,31 @@ export function useAppSettings() {
   const [isDarkMode, setIsDarkMode] = usePersistedState("voiceReal.darkMode", false);
   const [profile, setProfile] = usePersistedState("voiceReal.profile", defaultProfile);
   const [hasSeenOnboarding, setHasSeenOnboarding] = usePersistedState("voiceReal.hasSeenOnboarding", false);
-  const [privacySettings, setPrivacySettings] = usePersistedState("voiceReal.privacySettings", {
-    allowFriendRequests: true,
-    allowProfileDiscovery: true,
-    privateProfile: false,
-    savePostsToArchive: true,
-    muteDailyReminders: false
-  });
-  const [safetySettings, setSafetySettings] = usePersistedState("voiceReal.safetySettings", {
-    ageConfirmed: false,
-    supportEmail: "support@outloud.local",
-    termsAccepted: false
-  });
-  const [securitySettings, setSecuritySettings] = usePersistedState("voiceReal.securitySettings", {
-    appLockEnabled: false,
-    pin: ""
-  });
+  const [storedPrivacySettings, setStoredPrivacySettings] = usePersistedState(
+    "voiceReal.privacySettings",
+    DEFAULT_PRIVACY_SETTINGS
+  );
+  const [storedSafetySettings, setStoredSafetySettings] = usePersistedState(
+    "voiceReal.safetySettings",
+    DEFAULT_SAFETY_SETTINGS
+  );
+  const [storedBetaAccess, setStoredBetaAccess] = usePersistedState(
+    "voiceReal.betaAccess",
+    DEFAULT_BETA_ACCESS
+  );
+
+  const privacySettings = {
+    ...DEFAULT_PRIVACY_SETTINGS,
+    ...storedPrivacySettings
+  };
+  const safetySettings = {
+    ...DEFAULT_SAFETY_SETTINGS,
+    ...storedSafetySettings
+  };
+  const betaAccess = {
+    ...DEFAULT_BETA_ACCESS,
+    ...storedBetaAccess
+  };
 
   useEffect(() => {
     ensureStorageVersion()
@@ -38,33 +52,65 @@ export function useAppSettings() {
   }, []);
 
   function togglePrivacySetting(field) {
-    setPrivacySettings((current) => ({
+    setStoredPrivacySettings((current) => {
+      const settings = {
+        ...DEFAULT_PRIVACY_SETTINGS,
+        ...current
+      };
+
+      return {
+        ...settings,
+        [field]: !settings[field]
+      };
+    });
+  }
+
+  function updatePrivacySetting(field, value) {
+    setStoredPrivacySettings((current) => ({
+      ...DEFAULT_PRIVACY_SETTINGS,
       ...current,
-      [field]: !current[field]
+      [field]: value
     }));
   }
 
-  function updateSecuritySettings(nextSettings) {
-    setSecuritySettings((current) => ({
+  function toggleSafetySetting(field) {
+    setStoredSafetySettings((current) => {
+      const settings = {
+        ...DEFAULT_SAFETY_SETTINGS,
+        ...current
+      };
+
+      return {
+        ...settings,
+        [field]: !settings[field]
+      };
+    });
+  }
+
+  function updateBetaAccess(nextSettings) {
+    setStoredBetaAccess((current) => ({
+      ...DEFAULT_BETA_ACCESS,
       ...current,
       ...nextSettings
     }));
   }
 
   return {
+    betaAccess,
     hasSeenOnboarding,
     isDarkMode,
     privacySettings,
     profile,
     safetySettings,
-    securitySettings,
     setHasSeenOnboarding,
     setIsDarkMode,
-    setPrivacySettings,
+    setPrivacySettings: setStoredPrivacySettings,
     setProfile,
-    setSafetySettings,
+    setSafetySettings: setStoredSafetySettings,
     storageReady,
     togglePrivacySetting,
-    updateSecuritySettings
+    toggleSafetySetting,
+    updateBetaAccess,
+    updatePrivacySetting
   };
 }

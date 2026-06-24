@@ -9,6 +9,8 @@ export function buildPostItem(post, time, profile, isOwnPost = false) {
     caption: post.caption,
     playable: !!post.voiceUri,
     isOwnPost,
+    syncError: post.syncError || null,
+    uploadStatus: post.uploadStatus || "uploaded",
     voice: post.voiceUri ? "Voice note" : "No voice",
     visibility: post.visibility || "friends",
     voiceUri: post.voiceUri

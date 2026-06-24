@@ -39,7 +39,7 @@ export function OnboardingScreen({
 
   if (step === "intro") {
     return (
-      <View style={styles.onboarding}>
+      <View style={[styles.screen, styles.onboarding]}>
         <View style={styles.onboardingHero}>
           <BrandMark />
           <Text style={styles.onboardingKicker}>OutLoud</Text>
@@ -75,7 +75,7 @@ export function OnboardingScreen({
       behavior={Platform.OS === "ios" ? "padding" : "height"}
       style={styles.keyboardAvoider}
     >
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+      <ScrollView style={styles.screen} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <View style={styles.profilePanel}>
           <Text style={styles.profileLabel}>Profile</Text>
           <View style={styles.setupAvatarRow}>

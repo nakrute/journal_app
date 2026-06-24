@@ -1,4 +1,5 @@
 import { cleanupUnusedMedia, deleteMedia } from "../utils/media";
+import { markUploadStatus, UPLOAD_STATUS } from "../services/mockBackend";
 import {
   archivePromptFromPost,
   updatePostCaption,
@@ -36,6 +37,30 @@ export function useLocalPosts(logEvent) {
       return updatePostCaption(post, postId, nextCaption);
     });
     logEvent("Edited post caption");
+  }
+
+  function updatePostUploadState(postId, status, syncError = null, setSelectedPost) {
+    setPublishedPost((post) => {
+      if (!post || post.id !== postId) return post;
+      return markUploadStatus(post, status, syncError);
+    });
+    setGeneralPosts((posts) =>
+      posts.map((post) => (post.id === postId ? markUploadStatus(post, status, syncError) : post))
+    );
+    setSelectedPost?.((post) => {
+      if (!post || post.id !== postId) return post;
+      return markUploadStatus(post, status, syncError);
+    });
+  }
+
+  function retryPostUpload(postId, setSelectedPost) {
+    updatePostUploadState(postId, UPLOAD_STATUS.uploaded, null, setSelectedPost);
+    logEvent("Synced queued post to mock backend");
+  }
+
+  function simulatePostUploadFailure(postId, setSelectedPost) {
+    updatePostUploadState(postId, UPLOAD_STATUS.failed, "Mock upload failed. Retry when online.", setSelectedPost);
+    logEvent("Simulated post upload failure");
   }
 
   async function deletePost(postId, setSelectedPost) {
@@ -87,8 +112,10 @@ export function useLocalPosts(logEvent) {
     generalPosts,
     promptHistory,
     publishedPost,
+    retryPostUpload,
     savePost,
     setGeneralPosts,
+    simulatePostUploadFailure,
     updatePostCaption
   };
 }

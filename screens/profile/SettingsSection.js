@@ -1,7 +1,9 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useState } from "react";
-import { Pressable, Text, TextInput, View } from "react-native";
+import { useEffect, useState } from "react";
+import { Pressable, ScrollView, Text, TextInput, View } from "react-native";
+import { BETA_INVITE_CODE } from "../../constants/app";
 import { useStyles, useTheme } from "../../theme";
+import { isAdminProfile } from "../../utils/admin";
 import {
   EXPO_GO_NOTIFICATION_UNSUPPORTED,
   formatReminderTime,
@@ -11,11 +13,16 @@ import { validateHandle, validateTimeValue } from "../../utils/validation";
 
 export function SettingsSection({
   activityLog,
+  betaAccess,
   isDarkMode,
   notificationSettings,
   onClearActivityLog,
   onClearLocalPosts,
   onChangeReminderTime,
+  onContactSupport,
+  onDeleteLocalAccount,
+  onExportLocalData,
+  onOpenLegal,
   onRequestCameraPermission,
   onRequestMicrophonePermission,
   onPickProfilePhoto,
@@ -23,40 +30,51 @@ export function SettingsSection({
   onRestoreDemoData,
   onRunBugScenario,
   onSendTestNotification,
+  onSignOut,
   onSimulateFriendPost,
   onTogglePrivacySetting,
+  onToggleSafetySetting,
   onToggleDailyReminder,
   onToggleDarkMode,
   onToggleNotificationPreference,
-  onUpdateSecuritySettings,
+  onUpdateBetaAccess,
   onUpdateQuietHours,
+  onUpdatePrivacySetting,
   onUpdateProfile,
   permissionStatuses,
   profile,
   privacySettings,
   promptHistory,
   reports,
-  safetySettings,
-  securitySettings
+  safetySettings
 }) {
   const styles = useStyles();
   const [settingsSection, setSettingsSection] = useState("account");
+  const isAdmin = isAdminProfile(profile);
   const notificationsUnsupported =
     notificationSettings.permissionStatus === EXPO_GO_NOTIFICATION_UNSUPPORTED;
 
+  useEffect(() => {
+    if (!isAdmin && settingsSection === "debug") {
+      setSettingsSection("account");
+    }
+  }, [isAdmin, settingsSection]);
+
   return (
     <View style={styles.profilePanel}>
-      <SettingsMenu active={settingsSection} onChange={setSettingsSection} />
+      <SettingsMenu active={settingsSection} isAdmin={isAdmin} onChange={setSettingsSection} />
 
       {settingsSection === "account" ? (
         <AccountSettings
           isDarkMode={isDarkMode}
           onToggleDarkMode={onToggleDarkMode}
+          onDeleteLocalAccount={onDeleteLocalAccount}
+          onExportLocalData={onExportLocalData}
+          onOpenLegal={onOpenLegal}
           onPickProfilePhoto={onPickProfilePhoto}
+          onSignOut={onSignOut}
           onUpdateProfile={onUpdateProfile}
-          onUpdateSecuritySettings={onUpdateSecuritySettings}
           profile={profile}
-          securitySettings={securitySettings}
         />
       ) : null}
 
@@ -79,18 +97,21 @@ export function SettingsSection({
           <PermissionRow
             icon="camera-outline"
             label="Camera"
+            description="Used only when you take or retake a post photo."
             status={permissionStatuses.camera}
             onPress={onRequestCameraPermission}
           />
           <PermissionRow
             icon="mic-outline"
             label="Microphone"
+            description="Used only while recording a voice note."
             status={permissionStatuses.microphone}
             onPress={onRequestMicrophonePermission}
           />
           <PermissionRow
             icon="notifications-outline"
             label="Notifications"
+            description="Used for reminders and social alerts when enabled."
             status={permissionStatuses.notifications}
             onPress={onSendTestNotification}
           />
@@ -98,18 +119,32 @@ export function SettingsSection({
       ) : null}
 
       {settingsSection === "privacy" ? (
-        <PrivacySettings privacySettings={privacySettings} onTogglePrivacySetting={onTogglePrivacySetting} />
+        <PrivacySettings
+          privacySettings={privacySettings}
+          onTogglePrivacySetting={onTogglePrivacySetting}
+          onUpdatePrivacySetting={onUpdatePrivacySetting}
+        />
       ) : null}
 
       {settingsSection === "safety" ? (
-        <SafetySettings reports={reports} safetySettings={safetySettings} />
+        <SafetySettings
+          onContactSupport={onContactSupport}
+          onOpenLegal={onOpenLegal}
+          onToggleSafetySetting={onToggleSafetySetting}
+          reports={reports}
+          safetySettings={safetySettings}
+        />
+      ) : null}
+
+      {settingsSection === "beta" ? (
+        <BetaAccessSettings betaAccess={betaAccess} onUpdateBetaAccess={onUpdateBetaAccess} />
       ) : null}
 
       {settingsSection === "history" ? (
         <PromptHistory promptHistory={promptHistory} />
       ) : null}
 
-      {settingsSection === "debug" ? (
+      {isAdmin && settingsSection === "debug" ? (
         <DebugSettings
           activityLog={activityLog}
           onClearActivityLog={onClearActivityLog}
@@ -123,20 +158,30 @@ export function SettingsSection({
   );
 }
 
-function SettingsMenu({ active, onChange }) {
+function SettingsMenu({ active, isAdmin, onChange }) {
   const styles = useStyles();
+  const menuItems = [
+    ["account", "Account"],
+    ["permissions", "Permissions"],
+    ["privacy", "Privacy"],
+    ["notifications", "Alerts"],
+    ["safety", "Safety"],
+    ["beta", "Beta"],
+    ["history", "History"]
+  ];
+
+  if (isAdmin) {
+    menuItems.push(["debug", "Debug"]);
+  }
 
   return (
-    <View style={styles.settingsMenu}>
-      {[
-        ["account", "Account"],
-        ["permissions", "Permissions"],
-        ["privacy", "Privacy"],
-        ["notifications", "Alerts"],
-        ["safety", "Safety"],
-        ["history", "History"],
-        ["debug", "Debug"]
-      ].map(([key, label]) => (
+    <ScrollView
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      style={styles.settingsMenuScroller}
+      contentContainerStyle={styles.settingsMenu}
+    >
+      {menuItems.map(([key, label]) => (
         <Pressable
           key={key}
           style={[styles.reminderTimeButton, active === key && styles.activeReminderTimeButton]}
@@ -147,18 +192,20 @@ function SettingsMenu({ active, onChange }) {
           </Text>
         </Pressable>
       ))}
-    </View>
+    </ScrollView>
   );
 }
 
 function AccountSettings({
   isDarkMode,
+  onDeleteLocalAccount,
+  onExportLocalData,
+  onOpenLegal,
   onToggleDarkMode,
   onPickProfilePhoto,
+  onSignOut,
   onUpdateProfile,
-  onUpdateSecuritySettings,
-  profile,
-  securitySettings
+  profile
 }) {
   const styles = useStyles();
 
@@ -212,10 +259,42 @@ function AccountSettings({
         multiline
       />
 
-      <SecuritySection
-        securitySettings={securitySettings}
-        onUpdateSecuritySettings={onUpdateSecuritySettings}
+      <Text style={styles.profileLabel}>Account readiness</Text>
+      <ActionRow
+        icon="download-outline"
+        title="Export local data"
+        description="Share a local JSON summary of this dummy profile, posts, friends, reports, and settings."
+        onPress={onExportLocalData}
       />
+      <ActionRow
+        icon="document-text-outline"
+        title="Privacy policy"
+        description="Placeholder for production data collection, retention, deletion, and voice/photo storage copy."
+        onPress={() => onOpenLegal("privacy")}
+      />
+      <ActionRow
+        icon="reader-outline"
+        title="Terms and rules"
+        description="Placeholder for production posting rules, user conduct, reports, and account use."
+        onPress={() => onOpenLegal("terms")}
+      />
+      <ActionRow
+        icon="log-out-outline"
+        title="Sign out"
+        description="No real session exists yet; this shows where Google/Supabase sign-out will live."
+        onPress={onSignOut}
+      />
+      <Pressable style={styles.destructiveButton} onPress={onDeleteLocalAccount}>
+        <Ionicons name="trash-outline" size={18} color="#111" />
+        <Text style={styles.destructiveButtonText}>Delete local account data</Text>
+      </Pressable>
+
+      <View style={styles.historyRow}>
+        <Text style={styles.settingTitle}>Session security groundwork</Text>
+        <Text style={styles.subtle}>
+          When auth is added, OAuth sessions should move to encrypted device storage and backend roles should replace local admin handles.
+        </Text>
+      </View>
     </>
   );
 }
@@ -336,12 +415,42 @@ function NotificationSettings({
   );
 }
 
-function PrivacySettings({ privacySettings, onTogglePrivacySetting }) {
+function PrivacySettings({ privacySettings, onTogglePrivacySetting, onUpdatePrivacySetting }) {
   const styles = useStyles();
 
   return (
     <View style={styles.settingGroup}>
       <Text style={styles.profileLabel}>Privacy</Text>
+      <View style={styles.historyRow}>
+        <Text style={styles.settingTitle}>Default post visibility</Text>
+        <Text style={styles.subtle}>Choose the starting audience for new posts before you publish.</Text>
+        <View style={styles.visibilityOptions}>
+          {[
+            ["friends", "Friends"],
+            ["close", "Close"],
+            ["private", "Only me"],
+            ["public", "Public"]
+          ].map(([value, label]) => (
+            <Pressable
+              key={value}
+              style={[
+                styles.reminderTimeButton,
+                privacySettings.defaultPostVisibility === value && styles.activeReminderTimeButton
+              ]}
+              onPress={() => onUpdatePrivacySetting("defaultPostVisibility", value)}
+            >
+              <Text
+                style={[
+                  styles.reminderTimeText,
+                  privacySettings.defaultPostVisibility === value && styles.activeReminderTimeText
+                ]}
+              >
+                {label}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+      </View>
       <ToggleRow
         enabled={privacySettings.allowFriendRequests}
         label="Allow friend requests"
@@ -361,6 +470,24 @@ function PrivacySettings({ privacySettings, onTogglePrivacySetting }) {
         onPress={() => onTogglePrivacySetting("privateProfile")}
       />
       <ToggleRow
+        enabled={privacySettings.allowVoicePlayback}
+        label="Voice playback"
+        description="Allow friends to play voice notes attached to your posts."
+        onPress={() => onTogglePrivacySetting("allowVoicePlayback")}
+      />
+      <ToggleRow
+        enabled={privacySettings.closeFriendsOnlyVoice}
+        label="Close friends hear voice"
+        description="Default voice-note access to close friends when backend audiences arrive."
+        onPress={() => onTogglePrivacySetting("closeFriendsOnlyVoice")}
+      />
+      <ToggleRow
+        enabled={privacySettings.showActivityStatus}
+        label="Show activity status"
+        description="Let friends see recent activity once real accounts are connected."
+        onPress={() => onTogglePrivacySetting("showActivityStatus")}
+      />
+      <ToggleRow
         enabled={privacySettings.savePostsToArchive}
         label="Save posts to archive"
         description="Keep check-ins in prompt history."
@@ -376,7 +503,13 @@ function PrivacySettings({ privacySettings, onTogglePrivacySetting }) {
   );
 }
 
-function SafetySettings({ reports = [], safetySettings }) {
+function SafetySettings({
+  onContactSupport,
+  onOpenLegal,
+  onToggleSafetySetting,
+  reports = [],
+  safetySettings
+}) {
   const styles = useStyles();
 
   return (
@@ -389,10 +522,52 @@ function SafetySettings({ reports = [], safetySettings }) {
         </Text>
         <Text style={styles.caption}>Support: {safetySettings.supportEmail}</Text>
       </View>
+      <ActionRow
+        icon="mail-outline"
+        title="Contact support"
+        description="Keep support reachable from inside the app before public launch."
+        onPress={onContactSupport}
+      />
+      <ActionRow
+        icon="reader-outline"
+        title="Community rules"
+        description="Review the placeholder rules that reports and moderation will enforce."
+        onPress={() => onOpenLegal("terms")}
+      />
       <View style={styles.historyRow}>
         <Text style={styles.settingTitle}>Age gate</Text>
         <Text style={styles.subtle}>
           Production should require an age confirmation before account creation.
+        </Text>
+      </View>
+      <ToggleRow
+        enabled={safetySettings.autoHideReportedContent}
+        label="Hide reported content"
+        description="Locally hide reported items once backend moderation is connected."
+        onPress={() => onToggleSafetySetting("autoHideReportedContent")}
+      />
+      <ToggleRow
+        enabled={safetySettings.hideBlockedProfiles}
+        label="Hide blocked profiles"
+        description="Blocked users should disappear from feeds, search, and requests."
+        onPress={() => onToggleSafetySetting("hideBlockedProfiles")}
+      />
+      <ToggleRow
+        enabled={safetySettings.requireReportReason}
+        label="Require report reason"
+        description="Reports should include a category before they enter review."
+        onPress={() => onToggleSafetySetting("requireReportReason")}
+      />
+      <ToggleRow
+        enabled={safetySettings.contactEmailVisible}
+        label="Show support contact"
+        description="Keep contact information visible for review and safety issues."
+        onPress={() => onToggleSafetySetting("contactEmailVisible")}
+      />
+      <View style={styles.historyRow}>
+        <Text style={styles.settingTitle}>Crash reporting</Text>
+        <Text style={styles.subtle}>
+          The app has a local error boundary now. A remote crash service should be connected before a public beta.
         </Text>
       </View>
       <Text style={styles.profileLabel}>Local reports</Text>
@@ -406,6 +581,62 @@ function SafetySettings({ reports = [], safetySettings }) {
           </View>
         ))
       )}
+    </View>
+  );
+}
+
+function BetaAccessSettings({ betaAccess, onUpdateBetaAccess }) {
+  const styles = useStyles();
+  const [code, setCode] = useState(betaAccess.acceptedCode || "");
+  const codeMatches = code.trim().toUpperCase() === BETA_INVITE_CODE;
+
+  function saveCode() {
+    if (!codeMatches) return;
+
+    onUpdateBetaAccess({
+      acceptedAt: new Date().toISOString(),
+      acceptedCode: code.trim()
+    });
+  }
+
+  return (
+    <View style={styles.settingGroup}>
+      <Text style={styles.profileLabel}>Beta access</Text>
+      <ToggleRow
+        enabled={betaAccess.requireInvite}
+        label="Require invite code"
+        description="When enabled, this device must unlock the prototype before entering the app."
+        onPress={() =>
+          onUpdateBetaAccess({
+            requireInvite: !betaAccess.requireInvite
+          })
+        }
+      />
+      <View style={styles.historyRow}>
+        <Text style={styles.settingTitle}>Invite code</Text>
+        <Text style={styles.subtle}>Local prototype code: {BETA_INVITE_CODE}</Text>
+        <TextInput
+          autoCapitalize="characters"
+          autoCorrect={false}
+          onChangeText={setCode}
+          placeholder={BETA_INVITE_CODE}
+          placeholderTextColor="#8a867d"
+          style={styles.profileInput}
+          value={code}
+        />
+        <Pressable
+          style={[styles.smallActionButton, !codeMatches && styles.disabledButton]}
+          disabled={!codeMatches}
+          onPress={saveCode}
+        >
+          <Text style={styles.smallActionText}>Save beta access</Text>
+        </Pressable>
+        <Text style={styles.subtle}>
+          {betaAccess.acceptedAt
+            ? `Unlocked on ${formatHistoryDate(betaAccess.acceptedAt)}.`
+            : "Not unlocked yet."}
+        </Text>
+      </View>
     </View>
   );
 }
@@ -457,6 +688,9 @@ function DebugSettings({
         <Pressable style={styles.secondaryActionButton} onPress={() => onRunBugScenario("longCaption")}>
           <Text style={styles.secondaryActionText}>Long caption</Text>
         </Pressable>
+        <Pressable style={styles.secondaryActionButton} onPress={() => onRunBugScenario("uploadFailure")}>
+          <Text style={styles.secondaryActionText}>Upload failed</Text>
+        </Pressable>
       </View>
 
       <Text style={styles.profileLabel}>Activity log</Text>
@@ -490,7 +724,7 @@ function DebugSettings({
   );
 }
 
-function PermissionRow({ icon, label, status, onPress }) {
+function PermissionRow({ description, icon, label, status, onPress }) {
   const styles = useStyles();
   const { isDarkMode } = useTheme();
   const iconColor = isDarkMode ? "#f8f7f2" : "#111";
@@ -500,7 +734,25 @@ function PermissionRow({ icon, label, status, onPress }) {
       <Ionicons name={icon} size={20} color={iconColor} />
       <View style={styles.settingCopy}>
         <Text style={styles.settingTitle}>{label}</Text>
-        <Text style={styles.subtle}>{formatPermissionStatus(status)}</Text>
+        <Text style={styles.subtle}>{description}</Text>
+        <Text style={styles.visibilityText}>{formatPermissionStatus(status)}</Text>
+      </View>
+      <Ionicons name="chevron-forward" size={18} color={iconColor} />
+    </Pressable>
+  );
+}
+
+function ActionRow({ description, icon, onPress, title }) {
+  const styles = useStyles();
+  const { isDarkMode } = useTheme();
+  const iconColor = isDarkMode ? "#f8f7f2" : "#111";
+
+  return (
+    <Pressable style={styles.permissionRow} onPress={onPress}>
+      <Ionicons name={icon} size={20} color={iconColor} />
+      <View style={styles.settingCopy}>
+        <Text style={styles.settingTitle}>{title}</Text>
+        <Text style={styles.subtle}>{description}</Text>
       </View>
       <Ionicons name="chevron-forward" size={18} color={iconColor} />
     </Pressable>
@@ -520,51 +772,6 @@ function ToggleRow({ description, enabled, label, onPress }) {
         <View style={[styles.switchThumb, enabled && styles.switchThumbActive]} />
       </View>
     </Pressable>
-  );
-}
-
-function SecuritySection({ securitySettings, onUpdateSecuritySettings }) {
-  const styles = useStyles();
-  const [pin, setPin] = useState(securitySettings.pin);
-  const canEnable = pin.trim().length >= 4;
-
-  function toggleLock() {
-    if (securitySettings.appLockEnabled) {
-      onUpdateSecuritySettings({ appLockEnabled: false });
-      return;
-    }
-
-    if (!canEnable) return;
-    onUpdateSecuritySettings({ appLockEnabled: true, pin });
-  }
-
-  return (
-    <View style={styles.settingGroup}>
-      <Text style={styles.profileLabel}>Security</Text>
-      <TextInput
-        style={styles.profileInput}
-        value={pin}
-        onChangeText={setPin}
-        placeholder="Set a local PIN"
-        placeholderTextColor="#8a867d"
-        keyboardType="number-pad"
-        maxLength={8}
-        secureTextEntry
-      />
-      <Pressable
-        style={[styles.settingRow, !securitySettings.appLockEnabled && !canEnable && styles.disabledButton]}
-        onPress={toggleLock}
-        disabled={!securitySettings.appLockEnabled && !canEnable}
-      >
-        <View style={styles.settingCopy}>
-          <Text style={styles.settingTitle}>App lock</Text>
-          <Text style={styles.subtle}>Require this PIN when the app starts.</Text>
-        </View>
-        <View style={[styles.switchTrack, securitySettings.appLockEnabled && styles.switchTrackActive]}>
-          <View style={[styles.switchThumb, securitySettings.appLockEnabled && styles.switchThumbActive]} />
-        </View>
-      </Pressable>
-    </View>
   );
 }
 

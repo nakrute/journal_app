@@ -27,7 +27,7 @@ export function PostDetailScreen({
   }
 
   return (
-    <ScrollView contentContainerStyle={styles.content}>
+    <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
       <View style={styles.detailHeader}>
         <Pressable style={styles.postIconButton} onPress={onBack}>
           <Ionicons name="chevron-back" size={20} color={iconColor} />

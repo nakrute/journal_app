@@ -5,11 +5,17 @@ export const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#f8f7f2"
   },
+  screen: {
+    flex: 1,
+    backgroundColor: "#f8f7f2"
+  },
   keyboardAvoider: {
-    flex: 1
+    flex: 1,
+    backgroundColor: "#f8f7f2"
   },
   header: {
     alignItems: "center",
+    backgroundColor: "#f8f7f2",
     flexDirection: "row",
     justifyContent: "space-between",
     paddingHorizontal: 20,
@@ -41,23 +47,6 @@ export const styles = StyleSheet.create({
   subtle: {
     color: "#67645e",
     fontSize: 13
-  },
-  timerPill: {
-    alignItems: "center",
-    backgroundColor: "#e8ff66",
-    borderRadius: 999,
-    flexDirection: "row",
-    gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 8
-  },
-  lateTimerPill: {
-    backgroundColor: "#ffb8a5"
-  },
-  timerText: {
-    color: "#111",
-    fontSize: 13,
-    fontWeight: "800"
   },
   content: {
     padding: 20,
@@ -423,8 +412,11 @@ export const styles = StyleSheet.create({
   },
   settingsMenu: {
     flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8
+    gap: 8,
+    paddingRight: 4
+  },
+  settingsMenuScroller: {
+    marginHorizontal: -2
   },
   profileSections: {
     backgroundColor: "#fff",
@@ -609,6 +601,9 @@ export const styles = StyleSheet.create({
     gap: 12,
     marginTop: 16
   },
+  friendActionGroup: {
+    gap: 8
+  },
   friendRow: {
     alignItems: "center",
     borderColor: "#eeebe2",
@@ -653,8 +648,15 @@ export const styles = StyleSheet.create({
     width: 36
   },
   friendRequestActions: {
+    alignItems: "center",
     flexDirection: "row",
     gap: 8
+  },
+  friendInlineActions: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    paddingLeft: 54
   },
   historyRow: {
     borderColor: "#eeebe2",
@@ -747,6 +749,37 @@ export const styles = StyleSheet.create({
     fontWeight: "900",
     marginTop: 8,
     textTransform: "uppercase"
+  },
+  uploadStatusRow: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: 8,
+    marginTop: 10
+  },
+  statusPill: {
+    alignItems: "center",
+    backgroundColor: "#e8ff66",
+    borderRadius: 999,
+    flexDirection: "row",
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 7
+  },
+  failedStatusPill: {
+    backgroundColor: "#ffb8a5"
+  },
+  statusPillText: {
+    color: "#111",
+    fontSize: 12,
+    fontWeight: "900"
+  },
+  statusActionButton: {
+    alignItems: "center",
+    backgroundColor: "#f0eee7",
+    borderRadius: 999,
+    height: 30,
+    justifyContent: "center",
+    width: 30
   },
   caption: {
     color: "#25231f",
@@ -946,6 +979,15 @@ const darkStyles = StyleSheet.create({
   shell: {
     backgroundColor: "#10110f"
   },
+  screen: {
+    backgroundColor: "#10110f"
+  },
+  keyboardAvoider: {
+    backgroundColor: "#10110f"
+  },
+  header: {
+    backgroundColor: "#10110f"
+  },
   menuButton: {
     backgroundColor: "#1c1d1a",
     borderColor: "#30322d"
@@ -1078,6 +1120,9 @@ const darkStyles = StyleSheet.create({
     borderColor: "#30322d"
   },
   postIconButton: {
+    backgroundColor: "#2a2c27"
+  },
+  statusActionButton: {
     backgroundColor: "#2a2c27"
   },
   editCaptionInput: {

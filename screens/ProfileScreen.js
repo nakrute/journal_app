@@ -9,6 +9,8 @@ import { formatHandle } from "./profile/profileUtils";
 
 export function ProfileScreen({
   activityLog,
+  betaAccess,
+  blockedProfiles,
   friendRequests,
   friends,
   isDarkMode,
@@ -20,9 +22,14 @@ export function ProfileScreen({
   onClearLocalPosts,
   onChangeProfile,
   onChangeReminderTime,
+  onCancelFriendRequest,
   onClose,
+  onContactSupport,
   onDeclineFriendRequest,
+  onDeleteLocalAccount,
+  onExportLocalData,
   onOpenFriend,
+  onOpenLegal,
   onPickProfilePhoto,
   onRequestCameraPermission,
   onRequestMicrophonePermission,
@@ -31,21 +38,25 @@ export function ProfileScreen({
   onRestoreDemoData,
   onRunBugScenario,
   onSendTestNotification,
+  onSignOut,
   onSimulateFriendPost,
   onToggleNotificationPreference,
   onTogglePrivacySetting,
+  onToggleSafetySetting,
   onToggleDailyReminder,
   onToggleDarkMode,
   onToggleCloseFriend,
-  onUpdateSecuritySettings,
+  onUnblockProfile,
+  onUpdateBetaAccess,
   onUpdateQuietHours,
+  onUpdatePrivacySetting,
   permissionStatuses,
+  outgoingFriendRequests,
   profile,
   privacySettings,
   promptHistory,
   reports,
-  safetySettings,
-  securitySettings
+  safetySettings
 }) {
   const styles = useStyles();
   const [activeSection, setActiveSection] = useState("friends");
@@ -64,7 +75,7 @@ export function ProfileScreen({
   }
 
   return (
-    <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+    <ScrollView style={styles.screen} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
       <View style={styles.profileHeader}>
         <Avatar name={profile.name} uri={profile.avatarUri} />
         <View style={styles.profileHeaderCopy}>
@@ -100,20 +111,28 @@ export function ProfileScreen({
           onAddFriend={submitFriendHandle}
           onBlockFriend={onBlockFriend}
           onChangeFriendHandle={setFriendHandle}
+          onCancelFriendRequest={onCancelFriendRequest}
           onDeclineFriendRequest={onDeclineFriendRequest}
           onOpenFriend={onOpenFriend}
           onRemoveFriend={onRemoveFriend}
           onToggleCloseFriend={onToggleCloseFriend}
+          onUnblockProfile={onUnblockProfile}
+          outgoingFriendRequests={outgoingFriendRequests}
+          blockedProfiles={blockedProfiles}
           privacySettings={privacySettings}
         />
       ) : (
         <SettingsSection
           activityLog={activityLog}
+          betaAccess={betaAccess}
           isDarkMode={isDarkMode}
           notificationSettings={notificationSettings}
           onClearActivityLog={onClearActivityLog}
           onClearLocalPosts={onClearLocalPosts}
           onChangeReminderTime={onChangeReminderTime}
+          onContactSupport={onContactSupport}
+          onDeleteLocalAccount={onDeleteLocalAccount}
+          onExportLocalData={onExportLocalData}
           onRequestCameraPermission={onRequestCameraPermission}
           onRequestMicrophonePermission={onRequestMicrophonePermission}
           onPickProfilePhoto={onPickProfilePhoto}
@@ -121,20 +140,23 @@ export function ProfileScreen({
           onRestoreDemoData={onRestoreDemoData}
           onRunBugScenario={onRunBugScenario}
           onSendTestNotification={onSendTestNotification}
+          onSignOut={onSignOut}
           onSimulateFriendPost={onSimulateFriendPost}
           onTogglePrivacySetting={onTogglePrivacySetting}
+          onToggleSafetySetting={onToggleSafetySetting}
           onToggleDailyReminder={onToggleDailyReminder}
           onToggleDarkMode={onToggleDarkMode}
           onToggleNotificationPreference={onToggleNotificationPreference}
-          onUpdateSecuritySettings={onUpdateSecuritySettings}
+          onOpenLegal={onOpenLegal}
+          onUpdateBetaAccess={onUpdateBetaAccess}
           onUpdateQuietHours={onUpdateQuietHours}
+          onUpdatePrivacySetting={onUpdatePrivacySetting}
           permissionStatuses={permissionStatuses}
           profile={profile}
           privacySettings={privacySettings}
           promptHistory={promptHistory}
           reports={reports}
           safetySettings={safetySettings}
-          securitySettings={securitySettings}
           onUpdateProfile={updateProfile}
         />
       )}

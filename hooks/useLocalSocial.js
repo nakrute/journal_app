@@ -1,5 +1,6 @@
 import { incomingFriendRequests as starterFriendRequests, friends as starterFriends } from "../data/friends";
-import { createFriendFromHandle, friendExists, toggleCloseFriend } from "../services/friendsService";
+import { createBlockedProfile, createOutgoingFriendRequest } from "../services/mockBackend";
+import { toggleCloseFriend } from "../services/friendsService";
 import { formatHandle } from "../utils/formatting";
 import { usePersistedState } from "./usePersistedState";
 
@@ -9,18 +10,21 @@ export function useLocalSocial(logEvent) {
     "voiceReal.friendRequests",
     starterFriendRequests
   );
+  const [outgoingFriendRequests, setOutgoingFriendRequests] = usePersistedState(
+    "voiceReal.outgoingFriendRequests",
+    []
+  );
+  const [blockedProfiles, setBlockedProfiles] = usePersistedState("voiceReal.blockedProfiles", []);
 
   function addFriend(handle) {
     const normalizedHandle = formatHandle(handle);
     if (!normalizedHandle) return;
 
-    setFriends((currentFriends) => {
-      if (friendExists(currentFriends, normalizedHandle)) return currentFriends;
-
-      const friend = createFriendFromHandle(normalizedHandle);
-      return friend ? [friend, ...currentFriends] : currentFriends;
+    setOutgoingFriendRequests((requests) => {
+      if (requests.some((request) => request.handle === normalizedHandle)) return requests;
+      return [createOutgoingFriendRequest(normalizedHandle), ...requests];
     });
-    logEvent(`Added friend ${normalizedHandle}`);
+    logEvent(`Sent friend request ${normalizedHandle}`);
   }
 
   function acceptFriendRequest(request) {
@@ -37,15 +41,39 @@ export function useLocalSocial(logEvent) {
     logEvent("Declined friend request");
   }
 
+  function cancelFriendRequest(requestId) {
+    setOutgoingFriendRequests((requests) => requests.filter((item) => item.id !== requestId));
+    logEvent("Cancelled friend request");
+  }
+
   function removeFriend(friendId) {
     setFriends((currentFriends) => currentFriends.filter((friend) => friend.id !== friendId));
     logEvent("Removed friend");
   }
 
-  function blockFriend(friendId) {
-    removeFriend(friendId);
+  function blockFriend(target) {
+    const friendId = typeof target === "object" ? target.id : target;
+    const directProfile = typeof target === "object" ? target : null;
+
+    if (directProfile) {
+      setBlockedProfiles((blockedProfiles) => addBlockedProfile(blockedProfiles, directProfile));
+    }
+
+    setFriends((currentFriends) => {
+      const blockedProfile = currentFriends.find((friend) => friend.id === friendId);
+      if (blockedProfile) {
+        setBlockedProfiles((profiles) => addBlockedProfile(profiles, blockedProfile));
+      }
+      return currentFriends.filter((friend) => friend.id !== friendId);
+    });
     setFriendRequests((requests) => requests.filter((item) => item.id !== friendId));
+    setOutgoingFriendRequests((requests) => requests.filter((item) => item.id !== friendId));
     logEvent("Blocked friend");
+  }
+
+  function unblockProfile(profileId) {
+    setBlockedProfiles((profiles) => profiles.filter((profile) => profile.id !== profileId));
+    logEvent("Unblocked profile");
   }
 
   function toggleFriendCloseStatus(friendId) {
@@ -56,7 +84,17 @@ export function useLocalSocial(logEvent) {
   function restoreDemoSocialData() {
     setFriends(starterFriends);
     setFriendRequests(starterFriendRequests);
+    setOutgoingFriendRequests([]);
+    setBlockedProfiles([]);
     logEvent("Restored demo social data");
+  }
+
+  function clearLocalSocialData() {
+    setFriends([]);
+    setFriendRequests([]);
+    setOutgoingFriendRequests([]);
+    setBlockedProfiles([]);
+    logEvent("Cleared local social data");
   }
 
   function simulateNewFriendPost() {
@@ -82,13 +120,26 @@ export function useLocalSocial(logEvent) {
     acceptFriendRequest,
     addFriend,
     blockFriend,
+    blockedProfiles,
+    cancelFriendRequest,
+    clearLocalSocialData,
     declineFriendRequest,
     friendRequests,
     friends,
+    outgoingFriendRequests,
     removeFriend,
     restoreDemoSocialData,
     setFriends,
     simulateNewFriendPost,
-    toggleFriendCloseStatus
+    toggleFriendCloseStatus,
+    unblockProfile
   };
+}
+
+function addBlockedProfile(blockedProfiles, profile) {
+  if (!profile || blockedProfiles.some((blockedProfile) => blockedProfile.id === profile.id)) {
+    return blockedProfiles;
+  }
+
+  return [createBlockedProfile(profile), ...blockedProfiles];
 }

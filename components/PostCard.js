@@ -11,6 +11,7 @@ export function PostCard({
   onEditCaption,
   onOpen,
   onReport,
+  onRetryUpload,
   playbackStatus,
   onPlayVoice,
   playbackUri
@@ -71,6 +72,29 @@ export function PostCard({
           </View>
         </View>
         <Text style={styles.visibilityText}>{formatVisibility(item.visibility)}</Text>
+        {item.isOwnPost ? (
+          <View style={styles.uploadStatusRow}>
+            <View style={[styles.statusPill, item.uploadStatus === "failed" && styles.failedStatusPill]}>
+              <Ionicons name={getUploadIcon(item.uploadStatus)} size={14} color="#111" />
+              <Text style={styles.statusPillText}>{formatUploadStatus(item.uploadStatus)}</Text>
+            </View>
+            {item.uploadStatus === "failed" || item.uploadStatus === "queued" ? (
+              <Pressable
+                style={styles.statusActionButton}
+                onPress={() => onRetryUpload?.(item.id)}
+                accessibilityRole="button"
+                accessibilityLabel={item.uploadStatus === "failed" ? "Retry upload" : "Sync post"}
+              >
+                <Ionicons
+                  name={item.uploadStatus === "failed" ? "refresh-outline" : "cloud-upload-outline"}
+                  size={15}
+                  color={iconColor}
+                />
+              </Pressable>
+            ) : null}
+          </View>
+        ) : null}
+        {item.isOwnPost && item.syncError ? <Text style={styles.errorText}>{item.syncError}</Text> : null}
         {isEditingCaption ? (
           <View style={styles.editCaptionPanel}>
             <TextInput
@@ -142,4 +166,20 @@ function getFeedVoiceIcon(item, playbackUri, playbackStatus) {
 
 function isFeedVoicePlaying(item, playbackUri, playbackStatus) {
   return item.playable && playbackUri === item.voiceUri && playbackStatus.isPlaying;
+}
+
+function formatUploadStatus(status) {
+  if (status === "failed") return "Upload failed";
+  if (status === "uploading") return "Uploading";
+  if (status === "uploaded") return "Synced";
+  if (status === "deleted") return "Deleted remotely";
+  return "Queued";
+}
+
+function getUploadIcon(status) {
+  if (status === "failed") return "cloud-offline-outline";
+  if (status === "uploaded") return "cloud-done-outline";
+  if (status === "uploading") return "cloud-upload-outline";
+  if (status === "deleted") return "trash-outline";
+  return "cloud-outline";
 }

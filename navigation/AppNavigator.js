@@ -1,5 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
-import { NavigationContainer } from "@react-navigation/native";
+import { DarkTheme, DefaultTheme, NavigationContainer } from "@react-navigation/native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { Pressable, Text, View } from "react-native";
@@ -10,16 +10,28 @@ import { PostsScreen } from "../screens/PostsScreen";
 import { ProfileScreen } from "../screens/ProfileScreen";
 import { TodayScreen } from "../screens/TodayScreen";
 import { useStyles, useTheme } from "../theme";
-import { formatSeconds } from "../utils/time";
 import { VOICE_MAX_SECONDS } from "../constants/app";
 
 const RootStack = createNativeStackNavigator();
 const Tabs = createBottomTabNavigator();
 
 export function AppNavigator({ context }) {
+  const styles = useStyles();
+  const { isDarkMode } = useTheme();
+  const navigationTheme = {
+    ...(isDarkMode ? DarkTheme : DefaultTheme),
+    colors: {
+      ...(isDarkMode ? DarkTheme.colors : DefaultTheme.colors),
+      background: isDarkMode ? "#10110f" : "#f8f7f2",
+      card: isDarkMode ? "#10110f" : "#f8f7f2",
+      border: isDarkMode ? "#30322d" : "#dfdcd2",
+      text: isDarkMode ? "#f8f7f2" : "#111"
+    }
+  };
+
   return (
-    <NavigationContainer>
-      <RootStack.Navigator screenOptions={{ headerShown: false }}>
+    <NavigationContainer theme={navigationTheme}>
+      <RootStack.Navigator screenOptions={{ headerShown: false, contentStyle: styles.screen }}>
         <RootStack.Screen name="MainTabs">
           {() => <MainTabsNavigator context={context} />}
         </RootStack.Screen>
@@ -36,6 +48,7 @@ export function AppNavigator({ context }) {
 
 function MainTabsNavigator({ context }) {
   const styles = useStyles();
+  const { isDarkMode } = useTheme();
 
   return (
     <Tabs.Navigator
@@ -43,18 +56,19 @@ function MainTabsNavigator({ context }) {
         header: () => (
           <AppHeader
             isProfile={route.name === "ProfileTab"}
-            isLate={context.isLate}
             onMenuPress={() =>
               route.name === "ProfileTab"
                 ? navigation.navigate("TodayTab")
                 : navigation.navigate("ProfileTab")
             }
-            secondsRemaining={context.secondsRemaining}
           />
         ),
-        tabBarActiveTintColor: "#111",
+        sceneContainerStyle: styles.screen,
+        sceneStyle: styles.screen,
+        tabBarActiveBackgroundColor: isDarkMode ? "#2a2c27" : "#e8ff66",
+        tabBarActiveTintColor: isDarkMode ? "#e8ff66" : "#111",
         tabBarIcon: ({ focused, color }) => <TabIcon color={color} focused={focused} routeName={route.name} />,
-        tabBarInactiveTintColor: "#777",
+        tabBarInactiveTintColor: isDarkMode ? "#aaa59a" : "#777",
         tabBarItemStyle: styles.navTabItem,
         tabBarLabelStyle: styles.navTabLabel,
         tabBarStyle: styles.navTabs
@@ -98,7 +112,6 @@ function TodayRoute({ context, navigation }) {
       onTakePhoto={context.takePhoto}
       onToggleAddToPosts={() => context.setAddToPosts((value) => !value)}
       caption={context.caption}
-      isLate={context.isLate}
       onChangeCaption={context.setCaption}
       onChangeVisibility={context.setVisibility}
       posted={!!context.publishedPost}
@@ -129,6 +142,7 @@ function FeedRoute({ context, navigation }) {
       onDeletePost={context.deletePost}
       onOpenPost={(item) => navigation.getParent()?.navigate("PostDetail", { item })}
       onReportPost={context.reportItem}
+      onRetryPostUpload={context.retryPostUpload}
     />
   );
 }
@@ -145,6 +159,7 @@ function PostsRoute({ context, navigation }) {
       onDeletePost={context.deletePost}
       onOpenPost={(item) => navigation.getParent()?.navigate("PostDetail", { item })}
       onReportPost={context.reportItem}
+      onRetryPostUpload={context.retryPostUpload}
     />
   );
 }
@@ -152,6 +167,8 @@ function PostsRoute({ context, navigation }) {
 function ProfileRoute({ context, navigation }) {
   return (
     <ProfileScreen
+      betaAccess={context.betaAccess}
+      blockedProfiles={context.blockedProfiles}
       friendRequests={context.friendRequests}
       friends={context.friends}
       isDarkMode={context.isDarkMode}
@@ -163,9 +180,13 @@ function ProfileRoute({ context, navigation }) {
       onClearActivityLog={context.clearActivityLog}
       onChangeReminderTime={context.changeReminderTime}
       onChangeProfile={context.setProfile}
+      onCancelFriendRequest={context.cancelFriendRequest}
       onClose={() => navigation.navigate("TodayTab")}
       onDeclineFriendRequest={context.declineFriendRequest}
+      onDeleteLocalAccount={context.deleteLocalAccount}
+      onExportLocalData={context.exportLocalData}
       onOpenFriend={(friend) => navigation.getParent()?.navigate("FriendProfile", { friend })}
+      onOpenLegal={context.openLegalPlaceholder}
       onPickProfilePhoto={context.pickProfilePhoto}
       onRequestCameraPermission={context.requestCameraPermission}
       onRequestMicrophonePermission={context.requestMicrophonePermission}
@@ -174,22 +195,27 @@ function ProfileRoute({ context, navigation }) {
       onRestoreDemoData={context.restoreDemoData}
       onRunBugScenario={context.runBugScenario}
       onSendTestNotification={context.handleSendTestNotification}
+      onSignOut={context.signOutDummyProfile}
       onSimulateFriendPost={context.handleSimulateNewFriendPost}
+      onContactSupport={context.contactSupportPlaceholder}
       onToggleNotificationPreference={context.toggleNotificationPreference}
       onTogglePrivacySetting={context.togglePrivacySetting}
+      onToggleSafetySetting={context.toggleSafetySetting}
       onToggleDarkMode={() => context.setIsDarkMode((value) => !value)}
       onToggleCloseFriend={context.toggleFriendCloseStatus}
       onToggleDailyReminder={context.toggleDailyReminder}
-      onUpdateSecuritySettings={context.updateSecuritySettingsAndUnlock}
       onUpdateQuietHours={context.updateQuietHours}
+      onUpdateBetaAccess={context.updateBetaAccess}
+      onUpdatePrivacySetting={context.updatePrivacySetting}
+      onUnblockProfile={context.unblockProfile}
       permissionStatuses={context.permissionStatuses}
       activityLog={context.activityLog}
+      outgoingFriendRequests={context.outgoingFriendRequests}
       profile={context.profile}
       privacySettings={context.privacySettings}
       promptHistory={context.promptHistory}
       reports={context.reports}
       safetySettings={context.safetySettings}
-      securitySettings={context.securitySettings}
     />
   );
 }
@@ -239,7 +265,7 @@ function FriendProfileRoute({ context, navigation, route }) {
   );
 }
 
-function AppHeader({ isLate, isProfile, onMenuPress, secondsRemaining }) {
+function AppHeader({ isProfile, onMenuPress }) {
   const styles = useStyles();
   const { isDarkMode } = useTheme();
 
@@ -257,10 +283,6 @@ function AppHeader({ isLate, isProfile, onMenuPress, secondsRemaining }) {
           <Text style={styles.logo}>OutLoud</Text>
           <Text style={styles.subtle}>Daily candid photo + voice notes</Text>
         </View>
-      </View>
-      <View style={[styles.timerPill, isLate && styles.lateTimerPill]}>
-        <Ionicons name={isLate ? "alert-circle-outline" : "timer-outline"} size={16} color="#111" />
-        <Text style={styles.timerText}>{isLate ? "Late" : formatSeconds(secondsRemaining)}</Text>
       </View>
     </View>
   );
