@@ -1,13 +1,14 @@
-import { Audio } from "expo-av";
-import { useCameraPermissions } from "expo-camera";
 import * as ImagePicker from "expo-image-picker";
 import { StatusBar } from "expo-status-bar";
-import { useEffect, useRef, useState } from "react";
+import { useEffect } from "react";
 import { Alert, Share } from "react-native";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import { ErrorBoundary } from "./components/ErrorBoundary";
-import { BETA_INVITE_CODE, DEFAULT_BETA_ACCESS, VOICE_MAX_SECONDS } from "./constants/app";
+import { BETA_INVITE_CODE, DEFAULT_BETA_ACCESS } from "./constants/app";
+import { FEATURE_FLAGS } from "./constants/featureFlags";
 import { useActivityLog } from "./hooks/useActivityLog";
+import { useAudioController } from "./hooks/useAudioController";
+import { useCameraController } from "./hooks/useCameraController";
 import { defaultProfile, useAppSettings } from "./hooks/useAppSettings";
 import { useDailyDrop } from "./hooks/useDailyDrop";
 import { useDailyReminderNotifications } from "./hooks/useDailyReminderNotifications";
@@ -53,20 +54,6 @@ function AppShell({ appSettings }) {
     updatePrivacySetting
   } = appSettings;
   const styles = useStyles();
-  const cameraRef = useRef(null);
-  const [cameraPermission, requestCameraPermission] = useCameraPermissions();
-  const [cameraFacing, setCameraFacing] = useState("back");
-  const [recording, setRecording] = useState(null);
-  const [recordingStatus, setRecordingStatus] = useState("idle");
-  const [sound, setSound] = useState(null);
-  const [playbackUri, setPlaybackUri] = useState(null);
-  const [playbackStatus, setPlaybackStatus] = useState({
-    durationMillis: 0,
-    isPlaying: false,
-    positionMillis: 0
-  });
-  const [recordingSeconds, setRecordingSeconds] = useState(0);
-  const [microphonePermissionStatus, setMicrophonePermissionStatus] = useState("unknown");
   const { activityLog, clearActivityLog, logEvent } = useActivityLog();
   const {
     addToPosts,
@@ -81,6 +68,31 @@ function AppShell({ appSettings }) {
     visibility,
     voiceUri
   } = useDraftComposer();
+  const {
+    microphonePermissionStatus,
+    playbackStatus,
+    playbackUri,
+    recording,
+    recordingSeconds,
+    recordingStatus,
+    requestMicrophonePermission,
+    resetAudioDraft,
+    resetPlaybackStatus,
+    setPlaybackUri,
+    sound,
+    startRecording,
+    stopRecording,
+    syncPlaybackStatus,
+    toggleVoicePlayback
+  } = useAudioController({ logEvent, setVoiceUri, voiceUri });
+  const {
+    cameraFacing,
+    cameraPermission,
+    cameraRef,
+    requestCameraPermission,
+    setCameraFacing,
+    takePhoto
+  } = useCameraController({ capturedPhoto, logEvent, recording, setCapturedPhoto });
   const {
     cleanupPostMedia,
     clearLocalPosts,
@@ -130,224 +142,12 @@ function AppShell({ appSettings }) {
   };
 
   useEffect(() => {
-    Audio.getPermissionsAsync()
-      .then((permission) => setMicrophonePermissionStatus(permission.status))
-      .catch(() => setMicrophonePermissionStatus("unknown"));
-  }, []);
-
-  useEffect(() => {
-    if (!recording) {
-      setRecordingSeconds(0);
-      return undefined;
-    }
-
-    const timer = setInterval(() => {
-      setRecordingSeconds((seconds) => seconds + 1);
-    }, 1000);
-
-    return () => clearInterval(timer);
-  }, [recording]);
-
-  useEffect(() => {
-    if (recording && recordingSeconds >= VOICE_MAX_SECONDS) {
-      stopRecording();
-    }
-  }, [recording, recordingSeconds]);
-
-  useEffect(() => {
     cleanupPostMedia([capturedPhoto, voiceUri, profile.avatarUri]).catch(() => {});
   }, [capturedPhoto, cleanupPostMedia, profile.avatarUri, voiceUri]);
 
   useEffect(() => {
     setVisibility(privacySettings.defaultPostVisibility);
   }, [privacySettings.defaultPostVisibility, setVisibility]);
-
-  async function takePhoto() {
-    if (recording) {
-      Alert.alert("Recording in progress", "Stop the voice note before taking or retaking a photo.");
-      return;
-    }
-
-    if (!cameraPermission?.granted) {
-      const result = await requestCameraPermission();
-      if (!result.granted) return;
-    }
-
-    if (!cameraRef.current) return;
-
-    try {
-      const photo = await cameraRef.current.takePictureAsync({
-        quality: 0.75,
-        shutterSound: false
-      });
-      const savedPhotoUri = await preserveMedia(photo.uri, "photo");
-      await deleteMedia(capturedPhoto);
-      setCapturedPhoto(savedPhotoUri);
-      logEvent("Captured photo");
-    } catch (error) {
-      Alert.alert("Camera issue", "OutLoud could not capture a photo. Try retaking or restarting the camera.");
-      logEvent("Camera capture failed");
-    }
-  }
-
-  function resetPlaybackStatus() {
-    setPlaybackStatus({
-      durationMillis: 0,
-      isPlaying: false,
-      positionMillis: 0
-    });
-  }
-
-  async function unloadCurrentSound() {
-    if (!sound) return;
-    await sound.unloadAsync();
-    setSound(null);
-    setPlaybackUri(null);
-    resetPlaybackStatus();
-  }
-
-  async function startRecording() {
-    if (voiceUri) {
-      Alert.alert("Replace voice note?", "Recording again will remove the current draft voice note.", [
-        { text: "Cancel", style: "cancel" },
-        { text: "Replace", style: "destructive", onPress: beginRecording }
-      ]);
-      return;
-    }
-
-    await beginRecording();
-  }
-
-  async function beginRecording() {
-    const permission = await Audio.requestPermissionsAsync();
-    setMicrophonePermissionStatus(permission.status);
-    if (!permission.granted) {
-      Alert.alert("Microphone needed", "Enable microphone access to send voice messages.");
-      return;
-    }
-
-    await unloadCurrentSound();
-    await deleteMedia(voiceUri);
-    setVoiceUri(null);
-    setRecordingStatus("recording");
-    logEvent("Started voice recording");
-
-    await Audio.setAudioModeAsync({
-      allowsRecordingIOS: true,
-      playsInSilentModeIOS: true,
-      playThroughEarpieceAndroid: false
-    });
-
-    try {
-      const { recording: nextRecording } = await Audio.Recording.createAsync(
-        Audio.RecordingOptionsPresets.HIGH_QUALITY
-      );
-      setRecording(nextRecording);
-    } catch (error) {
-      setRecordingStatus("failed");
-      Alert.alert("Recording issue", "OutLoud could not start recording. Check microphone access and try again.");
-      logEvent("Voice recording failed to start");
-    }
-  }
-
-  async function stopRecording() {
-    if (!recording) return;
-    let nextVoiceUri = null;
-    setRecordingStatus("saving");
-
-    try {
-      await recording.stopAndUnloadAsync();
-      const uri = recording.getURI();
-      nextVoiceUri = await preserveMedia(uri, "voice");
-      setRecording(null);
-      setVoiceUri(nextVoiceUri);
-      setRecordingStatus("ready");
-      resetPlaybackStatus();
-      logEvent("Saved voice recording");
-    } catch (error) {
-      setRecording(null);
-      setRecordingStatus("failed");
-      Alert.alert("Recording issue", "OutLoud could not save that voice note. Try recording again.");
-      logEvent("Voice recording failed to save");
-      return;
-    }
-
-    await Audio.setAudioModeAsync({
-      allowsRecordingIOS: false,
-      playsInSilentModeIOS: true,
-      playThroughEarpieceAndroid: false
-    });
-
-    const { sound: nextSound, status } = await Audio.Sound.createAsync(
-      { uri: nextVoiceUri },
-      { shouldPlay: false },
-      syncPlaybackStatus
-    );
-    setSound(nextSound);
-    setPlaybackUri(nextVoiceUri);
-    syncPlaybackStatus(status);
-  }
-
-  function syncPlaybackStatus(status) {
-    if (!status.isLoaded) return;
-    setPlaybackStatus({
-      durationMillis: status.durationMillis || 0,
-      isPlaying: status.isPlaying,
-      positionMillis: status.positionMillis || 0
-    });
-  }
-
-  async function toggleVoicePlayback(uri = voiceUri) {
-    if (!uri) return;
-
-    try {
-      await Audio.setAudioModeAsync({
-        allowsRecordingIOS: false,
-        playsInSilentModeIOS: true,
-        playThroughEarpieceAndroid: false
-      });
-
-      if (sound && playbackUri === uri) {
-        const status = await sound.getStatusAsync();
-        if (status.isLoaded && status.isPlaying) {
-          await sound.pauseAsync();
-        } else {
-          const shouldRestart =
-            status.isLoaded &&
-            status.durationMillis &&
-            status.positionMillis >= status.durationMillis - 250;
-
-          if (shouldRestart) {
-            await sound.setPositionAsync(0);
-          }
-          await sound.playAsync();
-        }
-        return;
-      }
-
-      if (sound) {
-        await sound.unloadAsync();
-        setSound(null);
-      }
-      resetPlaybackStatus();
-
-      const { sound: nextSound, status } = await Audio.Sound.createAsync(
-        { uri },
-        { shouldPlay: true },
-        syncPlaybackStatus
-      );
-      setSound(nextSound);
-      setPlaybackUri(uri);
-      syncPlaybackStatus(status);
-    } catch (error) {
-      Alert.alert("Voice note unavailable", "This local audio file may no longer exist. Record a new voice note to replace it.");
-      if (uri === voiceUri) {
-        setVoiceUri(null);
-      }
-      resetPlaybackStatus();
-      logEvent("Voice playback failed");
-    }
-  }
 
   async function publishMoment() {
     const validationMessage = validateDraftPost({ capturedPhoto, voiceUri, caption });
@@ -377,12 +177,10 @@ function AppShell({ appSettings }) {
   }
 
   async function discardDraft() {
+    await resetAudioDraft();
     await deleteMedia(capturedPhoto);
     await deleteMedia(voiceUri);
     resetDraft();
-    setRecordingStatus("idle");
-    setPlaybackUri(null);
-    resetPlaybackStatus();
     logEvent("Discarded draft");
   }
 
@@ -393,18 +191,10 @@ function AppShell({ appSettings }) {
   }
 
   async function removeDraftVoice() {
+    await resetAudioDraft();
     await deleteMedia(voiceUri);
     setVoiceUri(null);
-    setPlaybackUri(null);
-    setRecordingStatus("idle");
-    resetPlaybackStatus();
     logEvent("Removed draft voice note");
-  }
-
-  async function requestMicrophonePermission() {
-    const permission = await Audio.requestPermissionsAsync();
-    setMicrophonePermissionStatus(permission.status);
-    logEvent(`Microphone permission ${permission.status}`);
   }
 
   function resetOnboarding() {
@@ -574,7 +364,7 @@ function AppShell({ appSettings }) {
         ...Array.from({ length: 6 }, (_, index) => ({
           id: `stress-${Date.now()}-${index}`,
           caption: `Long local stress post ${index + 1} with a caption that checks wrapping across compact cards.`,
-          photo: "https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&w=900&q=80",
+          photoUri: "https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&w=900&q=80",
           prompt,
           date: new Date().toISOString(),
           voiceUri: null
@@ -614,7 +404,7 @@ function AppShell({ appSettings }) {
     );
   }
 
-  if (betaAccess.requireInvite && !betaAccess.acceptedAt) {
+  if (FEATURE_FLAGS.betaGate && betaAccess.requireInvite && !betaAccess.acceptedAt) {
     return (
       <SafeAreaProvider>
         <SafeAreaView style={styles.shell} edges={["top", "bottom"]}>

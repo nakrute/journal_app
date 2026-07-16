@@ -1,16 +1,14 @@
 import { cleanupUnusedMedia, deleteMedia } from "../utils/media";
-import { markUploadStatus, UPLOAD_STATUS } from "../services/mockBackend";
-import {
-  archivePromptFromPost,
-  updatePostCaption,
-  updatePostCaptionList
-} from "../services/postsService";
+import { UPLOAD_STATUS } from "../services/mockBackend";
+import { localPostsRepository } from "../services/localPostsRepository";
+import { archivePromptFromPost } from "../services/postsService";
 import { usePersistedState } from "./usePersistedState";
+import { STORAGE_KEYS } from "../constants/storageKeys";
 
 export function useLocalPosts(logEvent) {
-  const [publishedPost, setPublishedPost] = usePersistedState("voiceReal.todayPost", null);
-  const [generalPosts, setGeneralPosts] = usePersistedState("voiceReal.posts", []);
-  const [promptHistory, setPromptHistory] = usePersistedState("voiceReal.promptHistory", []);
+  const [publishedPost, setPublishedPost] = usePersistedState(STORAGE_KEYS.todayPost, null);
+  const [generalPosts, setGeneralPosts] = usePersistedState(STORAGE_KEYS.posts, []);
+  const [promptHistory, setPromptHistory] = usePersistedState(STORAGE_KEYS.promptHistory, []);
 
   function savePost(nextPost, { addToPosts, archivePrompt, prompt }) {
     setPublishedPost(nextPost);
@@ -30,11 +28,11 @@ export function useLocalPosts(logEvent) {
   }
 
   function updatePostCaption(postId, nextCaption, setSelectedPost) {
-    setPublishedPost((post) => updatePostCaption(post, postId, nextCaption));
-    setGeneralPosts((posts) => updatePostCaptionList(posts, postId, nextCaption));
+    setPublishedPost((post) => localPostsRepository.updateCaption(post, postId, nextCaption));
+    setGeneralPosts((posts) => localPostsRepository.updateCaptionList(posts, postId, nextCaption));
     setSelectedPost?.((post) => {
       if (!post || post.id !== postId) return post;
-      return updatePostCaption(post, postId, nextCaption);
+      return localPostsRepository.updateCaption(post, postId, nextCaption);
     });
     logEvent("Edited post caption");
   }
@@ -42,14 +40,14 @@ export function useLocalPosts(logEvent) {
   function updatePostUploadState(postId, status, syncError = null, setSelectedPost) {
     setPublishedPost((post) => {
       if (!post || post.id !== postId) return post;
-      return markUploadStatus(post, status, syncError);
+      return localPostsRepository.updateUploadStatus(post, postId, status, syncError);
     });
     setGeneralPosts((posts) =>
-      posts.map((post) => (post.id === postId ? markUploadStatus(post, status, syncError) : post))
+      localPostsRepository.updateUploadStatusList(posts, postId, status, syncError)
     );
     setSelectedPost?.((post) => {
       if (!post || post.id !== postId) return post;
-      return markUploadStatus(post, status, syncError);
+      return localPostsRepository.updateUploadStatus(post, postId, status, syncError);
     });
   }
 
@@ -72,14 +70,14 @@ export function useLocalPosts(logEvent) {
       return null;
     });
     setGeneralPosts((posts) => {
-      const nextPosts = posts.filter((post) => post.id !== postId);
+      const nextPosts = localPostsRepository.remove(posts, postId);
       removedPost = removedPost || posts.find((post) => post.id === postId);
       return nextPosts;
     });
     setSelectedPost?.(null);
 
     if (removedPost) {
-      await deleteMedia(removedPost.photo);
+      await deleteMedia(removedPost.photoUri || removedPost.photo);
       await deleteMedia(removedPost.voiceUri);
     }
     logEvent("Deleted post");
@@ -97,9 +95,9 @@ export function useLocalPosts(logEvent) {
 
   async function cleanupPostMedia(draftUris = []) {
     const postUris = [
-      publishedPost?.photo,
+      publishedPost?.photoUri || publishedPost?.photo,
       publishedPost?.voiceUri,
-      ...generalPosts.flatMap((post) => [post.photo, post.voiceUri]),
+      ...generalPosts.flatMap((post) => [post.photoUri || post.photo, post.voiceUri]),
       ...draftUris
     ];
     await cleanupUnusedMedia(postUris);
@@ -109,9 +107,9 @@ export function useLocalPosts(logEvent) {
     cleanupPostMedia,
     clearLocalPosts,
     deletePost,
-    generalPosts,
+    generalPosts: localPostsRepository.normalizeList(generalPosts),
     promptHistory,
-    publishedPost,
+    publishedPost: localPostsRepository.normalize(publishedPost),
     retryPostUpload,
     savePost,
     setGeneralPosts,

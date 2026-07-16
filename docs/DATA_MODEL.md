@@ -2,6 +2,10 @@
 
 These shapes describe the live-data contract to use when the app moves to Supabase or another backend.
 
+Runtime code uses these canonical shapes. `services/entities.js` normalizes older local
+records that used `photo`, and the existing `voiceReal.*` AsyncStorage namespace is
+retained so prototype installs do not lose data.
+
 ## User
 
 - `id`: stable auth user id
@@ -31,6 +35,10 @@ These shapes describe the live-data contract to use when the app moves to Supaba
 - `createdAt`, `updatedAt`
 
 ## Notification Preference
+
+Friend profile records do not double as posts. The local demo adapter exposes the
+most recent feed item as `friend.latestPost`; a backend should query posts by
+`authorId` instead of embedding them in a profile.
 
 - `userId`
 - `dailyReminderEnabled`

@@ -5,7 +5,7 @@ export function createPostDraft({ caption, capturedPhoto, prompt, visibility, vo
   return {
     id: createLocalId("post"),
     caption: caption.trim() || "My real moment.",
-    photo: capturedPhoto,
+    photoUri: capturedPhoto,
     prompt,
     date: createTimestamp(),
     visibility: visibility || "friends",

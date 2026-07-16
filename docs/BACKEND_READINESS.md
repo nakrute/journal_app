@@ -2,6 +2,10 @@
 
 OutLoud is still local-first, but the code now has service modules under `services/` that define the backend-facing entity operations.
 
+`localPostsRepository` and `localSocialRepository` are the current local
+implementations. Screens continue consuming hook operations; future remote hooks can
+delegate to Supabase repositories while preserving those screen contracts.
+
 ## Supabase Swap Points
 
 - Replace AsyncStorage-backed hooks with Supabase queries/mutations.

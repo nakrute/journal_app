@@ -1,11 +1,13 @@
 export function buildPostItem(post, time, profile, isOwnPost = false) {
+  const photoUri = post.photoUri || post.photo;
   return {
     id: post.id,
     name: profile.name,
     handle: profile.handle,
     avatarUri: profile.avatarUri,
     time,
-    photo: post.photo,
+    photo: photoUri,
+    photoUri,
     caption: post.caption,
     playable: !!post.voiceUri,
     isOwnPost,

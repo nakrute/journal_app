@@ -1,11 +1,12 @@
 import { usePersistedState } from "./usePersistedState";
+import { STORAGE_KEYS } from "../constants/storageKeys";
 
 export function useDraftComposer() {
-  const [capturedPhoto, setCapturedPhoto] = usePersistedState("voiceReal.draft.photo", null);
-  const [voiceUri, setVoiceUri] = usePersistedState("voiceReal.draft.voiceUri", null);
-  const [caption, setCaption] = usePersistedState("voiceReal.draft.caption", "My real moment.");
-  const [addToPosts, setAddToPosts] = usePersistedState("voiceReal.draft.addToPosts", false);
-  const [visibility, setVisibility] = usePersistedState("voiceReal.draft.visibility", "friends");
+  const [capturedPhoto, setCapturedPhoto] = usePersistedState(STORAGE_KEYS.draftPhoto, null);
+  const [voiceUri, setVoiceUri] = usePersistedState(STORAGE_KEYS.draftVoiceUri, null);
+  const [caption, setCaption] = usePersistedState(STORAGE_KEYS.draftCaption, "My real moment.");
+  const [addToPosts, setAddToPosts] = usePersistedState(STORAGE_KEYS.draftAddToPosts, false);
+  const [visibility, setVisibility] = usePersistedState(STORAGE_KEYS.draftVisibility, "friends");
 
   function resetDraft() {
     setCapturedPhoto(null);

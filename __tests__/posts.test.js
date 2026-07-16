@@ -29,7 +29,7 @@ describe("post utilities", () => {
 
     expect(post).toMatchObject({
       caption: "Hello",
-      photo: "photo",
+      photoUri: "photo",
       prompt: "Prompt",
       visibility: "close",
       voiceUri: "voice"

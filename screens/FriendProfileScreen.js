@@ -35,7 +35,12 @@ export function FriendProfileScreen({
         <Text style={styles.profileLabel}>About</Text>
         <Text style={styles.visibilityText}>{friend.isCloseFriend ? "Close friend" : "Friend"}</Text>
         <Text style={styles.caption}>{friend.bio || "OutLoud friend. Recent check-ins and voice notes will live here."}</Text>
-        {friend.photo ? <Image source={{ uri: friend.photo }} style={styles.detailImage} /> : null}
+        {friend.latestPost?.photoUri || friend.photoUri || friend.photo ? (
+          <Image
+            source={{ uri: friend.latestPost?.photoUri || friend.photoUri || friend.photo }}
+            style={styles.detailImage}
+          />
+        ) : null}
         {friend.caption ? <Text style={styles.caption}>{friend.caption}</Text> : null}
       </View>
 

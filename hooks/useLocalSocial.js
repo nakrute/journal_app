@@ -1,20 +1,22 @@
 import { incomingFriendRequests as starterFriendRequests, friends as starterFriends } from "../data/friends";
 import { createBlockedProfile, createOutgoingFriendRequest } from "../services/mockBackend";
 import { toggleCloseFriend } from "../services/friendsService";
+import { localSocialRepository } from "../services/localSocialRepository";
 import { formatHandle } from "../utils/formatting";
 import { usePersistedState } from "./usePersistedState";
+import { STORAGE_KEYS } from "../constants/storageKeys";
 
 export function useLocalSocial(logEvent) {
-  const [friends, setFriends] = usePersistedState("voiceReal.friends", starterFriends);
+  const [friends, setFriends] = usePersistedState(STORAGE_KEYS.friends, starterFriends);
   const [friendRequests, setFriendRequests] = usePersistedState(
-    "voiceReal.friendRequests",
+    STORAGE_KEYS.friendRequests,
     starterFriendRequests
   );
   const [outgoingFriendRequests, setOutgoingFriendRequests] = usePersistedState(
-    "voiceReal.outgoingFriendRequests",
+    STORAGE_KEYS.outgoingFriendRequests,
     []
   );
-  const [blockedProfiles, setBlockedProfiles] = usePersistedState("voiceReal.blockedProfiles", []);
+  const [blockedProfiles, setBlockedProfiles] = usePersistedState(STORAGE_KEYS.blockedProfiles, []);
 
   function addFriend(handle) {
     const normalizedHandle = formatHandle(handle);
@@ -29,8 +31,7 @@ export function useLocalSocial(logEvent) {
 
   function acceptFriendRequest(request) {
     setFriends((currentFriends) => {
-      if (currentFriends.some((friend) => friend.id === request.id)) return currentFriends;
-      return [request, ...currentFriends];
+      return localSocialRepository.addFriend(currentFriends, request);
     });
     setFriendRequests((requests) => requests.filter((item) => item.id !== request.id));
     logEvent(`Accepted friend request ${request.handle}`);
@@ -47,7 +48,7 @@ export function useLocalSocial(logEvent) {
   }
 
   function removeFriend(friendId) {
-    setFriends((currentFriends) => currentFriends.filter((friend) => friend.id !== friendId));
+    setFriends((currentFriends) => localSocialRepository.removeFriend(currentFriends, friendId));
     logEvent("Removed friend");
   }
 
@@ -125,7 +126,7 @@ export function useLocalSocial(logEvent) {
     clearLocalSocialData,
     declineFriendRequest,
     friendRequests,
-    friends,
+    friends: localSocialRepository.normalizeFriends(friends),
     outgoingFriendRequests,
     removeFriend,
     restoreDemoSocialData,

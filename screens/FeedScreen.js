@@ -20,7 +20,17 @@ export function FeedScreen({
   const styles = useStyles();
   const { isDarkMode } = useTheme();
   const iconColor = isDarkMode ? "#f8f7f2" : "#111";
-  const friendPosts = friends.filter((friend) => friend.photo);
+  const friendPosts = friends
+    .filter((friend) => friend.latestPost || friend.photo || friend.photoUri)
+    .map((friend) => friend.latestPost ? {
+      ...friend.latestPost,
+      name: friend.name,
+      handle: friend.handle,
+      avatarUri: friend.avatarUri,
+      isCloseFriend: friend.isCloseFriend,
+      photo: friend.latestPost.photoUri,
+      playable: !!friend.latestPost.voiceUri
+    } : friend);
   const feed = publishedPost
     ? [buildPostItem(publishedPost, "now", profile, true), ...friendPosts]
     : friendPosts;

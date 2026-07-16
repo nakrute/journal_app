@@ -6,7 +6,7 @@ OutLoud is a mobile app where friends get a daily prompt to post a candid photo 
 
 ## First release scope
 
-- Daily timed posting window
+- Regular photo-and-voice composer, with optional daily-prompt behavior behind a feature flag
 - Camera capture for the daily moment
 - Short voice note recording
 - Friend feed with photo plus audio playback
@@ -31,8 +31,9 @@ OutLoud is a mobile app where friends get a daily prompt to post a candid photo 
 
 ## Near-term build order
 
-1. Replace prototype state with auth and real user profiles.
-2. Upload captured photos and audio clips to storage.
-3. Render real friend feed data from the backend.
-4. Add push notifications for the daily prompt.
-5. Add friend search, requests, blocking, and reporting.
+1. Finalize repository contracts and canonical profile, post, and friendship shapes.
+2. Add auth and real profiles behind the `realAuth` feature flag.
+3. Upload photos and audio behind the `mediaUpload` feature flag.
+4. Render real friend feed data from the backend.
+5. Add push notifications only when daily-drop behavior is enabled.
+6. Add remote friend search, requests, blocking, and reporting.
